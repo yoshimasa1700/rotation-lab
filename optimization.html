@@ -29,18 +29,77 @@
           回転や位置姿勢を推定するときは、<strong>正しい幾何を保ちながら、必要な自由度だけを動かす</strong>と扱いやすくなります。そのための道具が、SO(3)・SE(3)上の状態と、Lie代数による局所更新です。
         </p>
         <div class="guide-meta">
-          <span>ベクトル・行列の基礎から</span><span>約8分で読む</span
+          <span>ベクトル・行列の基礎から</span><span>約10分で読む</span
           ><span>右手系 / 列ベクトル / 能動回転</span>
         </div>
       </header>
       <nav class="guide-toc" aria-label="このページの目次">
         <span class="eyebrow">CONTENTS</span
+        ><a href="#lie-basics">まずは：リー群とリー代数</a
         ><a href="#addition">01 加算の落とし穴</a
         ><a href="#local">02 小さく解いて合成</a
         ><a href="#quaternion">03 Quaternionとの関係</a
         ><a href="#limits">04 解決できることの境界</a>
       </nav>
       <article class="guide-body">
+        <section
+          id="lie-basics"
+          class="guide-section"
+          aria-labelledby="lie-basics-title"
+        >
+          <p class="eyebrow">FIRST / 言葉の意味から</p>
+          <h2 id="lie-basics-title">リー群とリー代数を、カメラで考える。</h2>
+          <p>
+            <strong
+              >リー群は「変換そのもの」を集めたもの、リー代数は「変化の方向や大きさ」を計算するための空間</strong
+            >と考えると入りやすくなります。
+          </p>
+          <h3>リー群：回す・動かす操作の集まり。</h3>
+          <p>
+            カメラを「90°回す」「回してから1m動かす」。こうした変換を続けて行うと、結果もひとつの変換にまとめられます。何もしない変換と、元に戻す逆変換もあり、順序を保てば計算の括り方を変えても結果は同じです。この性質を持つ集合を<strong>群</strong>といいます。操作の順序を交換できるとは限りません。
+          </p>
+          <p>
+            さらに、集合が滑らかな空間になっていて、合成と逆操作も滑らかなら<strong>リー群</strong>です。変換の変化を微分で扱えます。回転の集合SO(3)と、回転＋平行移動の集合SE(3)は、その具体例です。
+          </p>
+          <h3>リー代数：ここから、どう変えるか。</h3>
+          <p>
+            「カメラをあと1°右へ向けたい」という修正量を、ベクトルのように計算する場所がリー代数です。回転に対応する<strong>so(3)は3成分</strong>、回転＋移動に対応する<strong>se(3)は6成分</strong>で表せます。大文字のSO・SEは変換の集合、小文字のso・seは対応するリー代数を指します。
+          </p>
+          <div class="closing-note">
+            <p class="eyebrow">最適化での使い方</p>
+            <p>
+              <strong
+                >修正量を計算する<br />↓ 指数写像で変換にする<br />↓
+                いまの姿勢に合成する</strong
+              >
+            </p>
+            <p>
+              「いまの姿勢」と「そこからの修正量」を分けて扱います。具体的な更新式は、この先の節で見ていきます。
+            </p>
+          </div>
+          <aside class="margin-note" id="identity">
+            <strong>恒等姿勢とは「何も回転していない姿勢」。</strong>
+            <p>
+              物体のX・Y・Z軸が、それぞれ基準の軸と一致した状態です。Euler角なら(0°,
+              0°, 0°)、Quaternionなら(w, x, y, z) = (1, 0, 0,
+              0)、回転行列なら単位行列Iで表せます。
+            </p>
+            <p>
+              どの回転Rと合成してもRI = IR =
+              R。掛け算の「1」に相当します。SE(3)の恒等変換では、回転に加えて平行移動もゼロです。
+            </p>
+          </aside>
+          <p class="guide-caption">
+            厳密には、リー代数は「何もしない変換」の位置での接空間に、変換の順序による違いを表す括弧積という演算を備えたものです。小さい変化だけに限定された空間ではありませんが、最適化では局所的な修正量を扱うために使います。
+          </p>
+          <p class="reference-note">
+            背景と定義：Solàほか、<a
+              href="https://arxiv.org/html/1812.01537v9#S2"
+              >A micro Lie theoryのリー群・接空間・指数写像の説明</a
+            >。
+          </p>
+        </section>
+
         <section id="addition" class="guide-section">
           <p class="eyebrow">01 / KEEP THE GEOMETRY</p>
           <h2>行列に足すだけでは、<br />長さまで変わってしまう。</h2>

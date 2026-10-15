@@ -46,6 +46,8 @@ npm run dev
 npm test          # 数学・Three.js境界の22テスト
 npm run build     # TypeScript型検査＋本番ビルド
 npm run preview   # ビルドした静的サイトを確認
+npx playwright install chromium # 初回のみ
+npm run test:e2e  # 本番ビルド＋9つのブラウザ操作テスト
 ```
 
 ## 設計
@@ -61,11 +63,12 @@ src/demos/content.ts       5つの実験の説明
 src/ui/scene.ts            非対称物体・座標軸・ジンバル・軌跡
 src/main.ts               状態・操作・数値表示
 tests/math.test.ts        既知解・境界条件・固定seedの不変条件
+e2e/                     入力・フォーカス・補間・狭い画面の操作テスト
 ```
 
 ## 公開
 
-GitHub ActionsはPRでテスト・型検査・ビルドを実行し、`main`へのpush後にGitHub Pagesへ配信します。別のリポジトリで使う場合はSettings → Pages → Sourceを**GitHub Actions**に設定してください。Viteの`base: './'`により、リポジトリ配下URLでもアセットを解決できます。
+GitHub ActionsはPRで数学テスト・型検査・ビルド・Chromiumによる9つの操作テストを実行し、`main`へのpush後にGitHub Pagesへ配信します。別のリポジトリで使う場合はSettings → Pages → Sourceを**GitHub Actions**に設定してください。Viteの`base: './'`により、リポジトリ配下URLでもアセットを解決できます。
 
 [実装計画（開始時の記録）](docs/project-plan.md)と[設計の振り返り](docs/retrospective.md)も公開しています。現在の仕様はREADME・規約・コード・テストを参照してください。
 
@@ -76,5 +79,7 @@ GitHub ActionsはPRでテスト・型検査・ビルドを実行し、`main`へ�
 - SLERPは近接姿勢で正規化線形補間に切り替えます。この近似枝では厳密な等角速度ではありません。
 - 「始点からの回転角」は最短角距離で、回転の積算量ではありません。
 - 外部フォントを取得できない環境では端末のフォントを使います。
+
+操作性の改善と再現手順は[監査記録](docs/audit-2026-10-15.md)を参照してください。
 
 MIT License

@@ -7,6 +7,7 @@
   --paper: #f6f4ec;
   --ink: #283b36;
   --muted: #657169;
+  --stage-muted: #5c6b60;
   --line: #d4d8cd;
   --accent: #a5452e;
   --green: #397f57;
@@ -258,7 +259,7 @@ h2 {
   bottom: 15px;
   left: 20px;
   font-size: 9px;
-  color: #68766b;
+  color: var(--stage-muted);
   pointer-events: none;
 }
 .scene canvas {
@@ -804,5 +805,24 @@ footer {
   .view-wrap + .view-wrap {
     border-left: 0;
     border-top: 1px solid var(--line);
+  }
+}
+
+/* Give touch controls room without changing the desktop composition. */
+@media (max-width: 720px) {
+  .control-panel button,
+  .control-panel select,
+  .slider-control input[type="number"],
+  .slider-control input[type="range"],
+  .checkbox,
+  .quiet {
+    min-height: 44px;
+  }
+  .slider-control input[type="number"] {
+    font-size: 16px;
+    width: 76px;
+  }
+  .control-panel select {
+    font-size: 16px;
   }
 }

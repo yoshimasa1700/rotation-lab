@@ -95,6 +95,14 @@ function initState() {
   syncAngles();
 }
 function renderControls() {
+  const controls = $("controls");
+  const focused =
+    document.activeElement instanceof HTMLElement &&
+    controls.contains(document.activeElement)
+      ? document.activeElement
+      : null;
+  const focusedId = focused?.id;
+  const focusedAction = focused?.dataset.action;
   let html = "";
   if ([0, 1, 4].includes(active)) {
     html += `<div class="presets">${active === 1 ? button("pitch 0°", "p0") + button("89°", "p89") + button("90°", "p90") : button("恒等姿勢", "identity") + button("Z +90°", "z90") + button("複数軸", "multi")}</div>`;
@@ -157,6 +165,14 @@ function renderControls() {
   $("controls")
     .querySelectorAll<HTMLButtonElement>("button[data-action]")
     .forEach((b) => (b.onclick = () => action(b.dataset.action!)));
+  const replacement = focusedId
+    ? document.getElementById(focusedId)
+    : Array.from(
+        controls.querySelectorAll<HTMLButtonElement>("button[data-action]"),
+      ).find(
+        (button) => focusedAction && button.dataset.action === focusedAction,
+      );
+  replacement?.focus({ preventScroll: true });
 }
 function bindSliders(
   prefix: string,
@@ -167,22 +183,29 @@ function bindSliders(
     const range = $<HTMLInputElement>(prefix + i),
       number = $<HTMLInputElement>(prefix + i + "n");
     if (!range) continue;
-    const change = (input: HTMLInputElement) => {
-      if (input.value.trim() === "" || !Number.isFinite(input.valueAsNumber))
-        return;
-      const value = Math.min(
-        Number(input.max),
-        Math.max(Number(input.min), input.valueAsNumber),
-      );
-      set(i, value);
-      range.value = number.value = String(value);
+    const applyRange = () => {
+      number.value = range.value;
+      set(i, range.valueAsNumber);
       update();
     };
-    range.oninput = () => change(range);
-    number.oninput = () => change(number);
-    number.onblur = () => {
-      number.value = range.value;
+    const commitNumber = () => {
+      if (Number.isFinite(number.valueAsNumber)) {
+        // The native range clamps to bounds and snaps to the declared step.
+        range.value = String(number.valueAsNumber);
+      }
+      applyRange();
     };
+    range.oninput = applyRange;
+    number.oninput = () => {
+      // Preserve drafts such as "-0." instead of rewriting the user's text.
+      if (!number.validity.valid || !Number.isFinite(number.valueAsNumber))
+        return;
+      range.value = number.value;
+      set(i, number.valueAsNumber);
+      update();
+    };
+    number.onchange = commitNumber;
+    number.onblur = commitNumber;
   }
 }
 function action(name: string) {

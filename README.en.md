@@ -20,9 +20,11 @@ npm run dev
 npm test
 npm run build
 npm run preview
+npx playwright install chromium
+npm run test:e2e
 ```
 
-The independent TypeScript math core is covered by 22 tests: known rotations, singularities, interpolation edge cases, SE(3) inverse/composition, 200 fixed-seed invariant checks, and independent Three.js comparisons. GitHub Actions tests/builds pull requests and deploys `main` to Pages.
+The independent TypeScript math core is covered by 22 tests: known rotations, singularities, interpolation edge cases, SE(3) inverse/composition, 200 fixed-seed invariant checks, and independent Three.js comparisons. Nine browser tests additionally cover keyboard focus, character-by-character decimal entry, interpolation, rigid transforms, text contrast, touch targets, and 320px layouts. GitHub Actions runs both suites before deploying `main` to Pages.
 
 WebGL is required for 3D; numerical controls remain available without it. Near-identical SLERP inputs use normalized linear interpolation. General matrix/quaternion editing, inverse Euler conversion, Lie algebra tools, and a fully multilingual UI are outside this version.
 

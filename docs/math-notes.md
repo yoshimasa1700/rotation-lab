@@ -51,3 +51,14 @@ $$T_1T_2=\begin{bmatrix}R_1R_2&R_1t_2+t_1\\0&1\end{bmatrix},\quad T^{-1}=\begin{
 ## 制約と今後
 
 任意行列・Quaternionの直接入力、Euler逆変換、軸角による独立入力、Lie代数、ロボットアーム、完全な多言語UIは初版に含めない。3DはWebGLが必要で、利用不可時も数値操作は残る。画面のフォントはGoogle Fontsから取得し、オフライン時には端末のフォントへフォールバックする。
+
+## 最適化への補足
+
+[専用の解説ページ](https://yoshimasa1700.github.io/rotation-lab/optimization.html)に、SO(3)・SE(3)上の状態とso(3)・se(3)での局所更新を追加した。保存形式（行列・Quaternion）と更新自由度（3・6）を区別する。最適化ソルバーやLie代数の操作デモは未実装。
+
+掲載した数値例はθ = π/6、Z軸回転。一次近似A = I + [δθ]×ではAᵀA = diag(1+θ², 1+θ², 1)、det A = 1+θ² ≈ 1.2742、単位Xベクトルの変換後の長さは√(1+θ²) ≈ 1.1288となる。指数写像によるRz(θ)では直交性・行列式1・単位長さを保つ。
+
+参考：
+
+- Solàほか、[A micro Lie theory for state estimation in robotics](https://arxiv.org/html/1812.01537v9)。
+- Ceres Solver、[QuaternionManifold](https://ceres-solver.readthedocs.io/latest/nnls_modeling.html#quaternionmanifold)。

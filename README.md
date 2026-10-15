@@ -2,7 +2,7 @@
 
 Euler角・単位Quaternion・SO(3)・SE(3)の関係を、5つの3D実験で触って理解する学習用デモです。日本語の説明、数値、対応コードをひとつの流れで読めます。
 
-[デモを開く](https://yoshimasa1700.github.io/rotation-lab/) · [English](README.en.md) · [数学の規約](docs/conventions.md) · [検証ノート](docs/math-notes.md)
+[デモを開く](https://yoshimasa1700.github.io/rotation-lab/) · [最適化の解説](https://yoshimasa1700.github.io/rotation-lab/optimization.html) · [English](README.en.md) · [数学の規約](docs/conventions.md) · [検証ノート](docs/math-notes.md)
 
 [![Test, build and deploy](https://github.com/yoshimasa1700/rotation-lab/actions/workflows/pages.yml/badge.svg)](https://github.com/yoshimasa1700/rotation-lab/actions/workflows/pages.yml)
 
@@ -29,6 +29,10 @@ Euler角・単位Quaternion・SO(3)・SE(3)の関係を、5つの3D実験で触�
 | SO(3) | 3次元の回転全体 | 行列なら9 | 3 |
 | SE(3) | 回転＋移動の剛体変換全体 | 同次行列なら16 | 6 |
 
+## 最適化の解説ページ
+
+[なぜ最適化にSO(3)・SE(3)？](https://yoshimasa1700.github.io/rotation-lab/optimization.html)では、30°回転の数値例、Lie代数の3・6成分による局所更新、Quaternionとの併用、Euler角の特異点、手法の限界を説明しています。実験A・B・Eと相互に移動でき、JavaScriptなしでも読めます。
+
 ## 起動・検証
 
 Node.js **24 LTS**を推奨（最低22.12）。依存バージョンは`package-lock.json`で固定しています。
@@ -47,7 +51,7 @@ npm test          # 数学・Three.js境界の22テスト
 npm run build     # TypeScript型検査＋本番ビルド
 npm run preview   # ビルドした静的サイトを確認
 npx playwright install chromium # 初回のみ
-npm run test:e2e  # 本番ビルド＋9つのブラウザ操作テスト
+npm run test:e2e  # 本番ビルド＋11件のブラウザテスト
 ```
 
 ## 設計
@@ -68,14 +72,14 @@ e2e/                     入力・フォーカス・補間・狭い画面の操�
 
 ## 公開
 
-GitHub ActionsはPRで数学テスト・型検査・ビルド・Chromiumによる9つの操作テストを実行し、`main`へのpush後にGitHub Pagesへ配信します。別のリポジトリで使う場合はSettings → Pages → Sourceを**GitHub Actions**に設定してください。Viteの`base: './'`により、リポジトリ配下URLでもアセットを解決できます。
+GitHub ActionsはPRで数学テスト・型検査・ビルド・Chromiumによる11件のブラウザテストを実行し、`main`へのpush後にGitHub Pagesへ配信します。別のリポジトリで使う場合はSettings → Pages → Sourceを**GitHub Actions**に設定してください。Viteの`base: './'`により、リポジトリ配下URLでもアセットを解決できます。
 
 [実装計画（開始時の記録）](docs/project-plan.md)と[設計の振り返り](docs/retrospective.md)も公開しています。現在の仕様はREADME・規約・コード・テストを参照してください。
 
 ## 制約
 
 - WebGL対応ブラウザが必要。非対応時も数値と操作は利用可能です。
-- 日本語UIが中心です。任意行列・Quaternionの直接編集、Euler逆変換、Lie代数は含みません。
+- 日本語UIが中心です。任意行列・Quaternionの直接編集、Euler逆変換、Lie代数の操作デモ・最適化ソルバーは含みません。
 - SLERPは近接姿勢で正規化線形補間に切り替えます。この近似枝では厳密な等角速度ではありません。
 - 「始点からの回転角」は最短角距離で、回転の積算量ではありません。
 - 外部フォントを取得できない環境では端末のフォントを使います。

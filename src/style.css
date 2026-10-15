@@ -826,3 +826,36 @@ footer {
     font-size: 16px;
   }
 }
+
+.reading-note {
+  border-top: 1px solid var(--line);
+  padding: 36px 0 48px;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  align-items: center;
+}
+.reading-note h2 {
+  text-wrap: balance;
+  font-family: "Noto Serif JP", serif;
+  font-size: 24px;
+}
+.reading-note p:last-child {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+.reading-note > a {
+  color: var(--accent);
+  font-size: 14px;
+  padding: 14px 0;
+  line-height: 1.8;
+}
+@media (max-width: 900px) {
+  .reading-note {
+    display: block;
+  }
+  .reading-note > a {
+    display: inline-block;
+    margin-top: 12px;
+  }
+}

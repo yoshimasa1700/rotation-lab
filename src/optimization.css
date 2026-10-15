@@ -1,0 +1,271 @@
+.guide {
+  max-width: 1180px;
+}
+.guide-hero {
+  max-width: 850px;
+  padding: 76px 0 44px;
+}
+.guide-hero h1 {
+  font-size: clamp(30px, 5.5vw, 64px);
+  line-height: 1.5;
+  margin-bottom: 28px;
+}
+.guide-deck {
+  text-wrap: balance;
+  font-size: clamp(18px, 2.5vw, 25px);
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.guide-hero > p:last-of-type {
+  max-width: 690px;
+}
+.guide-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 28px;
+}
+.guide-toc {
+  padding: 22px 0;
+  border-block: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 25px;
+  align-items: center;
+}
+.guide-toc a {
+  font-size: 13px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.guide-toc .eyebrow {
+  margin: 0;
+}
+.guide-body {
+  max-width: 790px;
+  margin: 0 auto;
+}
+.guide-section {
+  padding: 64px 0;
+  border-bottom: 1px solid var(--line);
+  scroll-margin-top: 28px;
+}
+.guide-section:last-child {
+  border: 0;
+}
+.guide-section h2 {
+  font-family: "Noto Serif JP", serif;
+  font-size: clamp(23px, 3.2vw, 34px);
+  line-height: 1.65;
+  margin-bottom: 28px;
+  overflow-wrap: anywhere;
+}
+.guide-section h3 {
+  font-size: 20px;
+  margin-top: 36px;
+  line-height: 1.7;
+}
+.guide-body p,
+.guide-hero p {
+  line-height: 2;
+}
+.guide-body strong {
+  font-weight: 600;
+}
+.worked-example {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--line);
+  margin: 30px 0 12px;
+}
+.example-panel {
+  padding: 26px;
+  min-width: 0;
+}
+.example-panel.exact {
+  background: #eaf0e5;
+  border-left: 1px solid var(--line);
+}
+.example-panel h3 {
+  margin: 0 0 22px;
+  font-family: ui-monospace, monospace;
+}
+.example-panel pre {
+  font:
+    14px/1.9 ui-monospace,
+    monospace;
+  margin: 0 0 24px;
+}
+.example-panel p:last-child {
+  font-size: 13px;
+  margin-bottom: 0;
+}
+.example-result {
+  font-size: 14px;
+}
+.example-result strong {
+  color: var(--accent);
+}
+.exact .example-result strong {
+  color: var(--green);
+}
+.guide-caption,
+.reference-note {
+  font-size: 12px;
+  color: var(--muted);
+}
+.reference-note {
+  border-left: 2px solid var(--line);
+  padding-left: 16px;
+  margin-top: 28px;
+}
+.formula-note {
+  background: #eaf0e5;
+  border-left: 3px solid var(--green);
+  margin: 30px 0;
+  padding: 26px 32px;
+}
+.formula-note span {
+  font-size: 12px;
+  color: var(--stage-muted);
+}
+.formula-note p {
+  font-size: clamp(19px, 3vw, 27px);
+  font-family: Georgia, serif;
+  margin: 8px 0 24px;
+}
+.formula-note p:last-child {
+  margin-bottom: 0;
+}
+.margin-note {
+  padding: 20px 24px;
+  border-block: 1px solid var(--line);
+  margin: 30px 0;
+  font-size: 14px;
+}
+.margin-note p {
+  margin: 10px 0 0;
+}
+.iteration {
+  padding-left: 28px;
+}
+.iteration li {
+  padding: 10px 0 10px 12px;
+}
+.iteration li::marker {
+  color: var(--accent);
+  font-size: 20px;
+}
+.iteration p {
+  margin: 6px 0 0;
+}
+.guide-details {
+  margin-top: 30px;
+  font-size: 14px;
+}
+.guide-details summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 12px 0;
+  color: var(--accent);
+}
+.guide-details p {
+  margin-top: 12px;
+}
+.guide-table-wrap {
+  margin: 30px 0;
+}
+.guide-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.guide-table caption {
+  text-align: left;
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.guide-table th,
+.guide-table td {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.guide-table thead {
+  background: #eaf0e5;
+}
+.guide-table tbody th {
+  font-weight: 400;
+}
+.experiment-link {
+  display: inline-block;
+  padding: 12px 0;
+  color: var(--accent);
+  font-size: 14px;
+  line-height: 1.9;
+}
+.limits-list {
+  padding-left: 22px;
+}
+.limits-list li {
+  padding: 6px 0 14px 6px;
+  line-height: 2;
+}
+.closing-note {
+  padding: 30px;
+  margin: 30px 0 16px;
+  background: #eaf0e5;
+}
+.closing-note strong {
+  font-family: "Noto Serif JP", serif;
+  font-size: clamp(18px, 2.8vw, 24px);
+}
+.closing-note p:last-child {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+@media (max-width: 720px) {
+  .guide-hero {
+    padding: 44px 0 32px;
+  }
+  .guide-section {
+    padding: 42px 0;
+  }
+  .guide-toc {
+    display: grid;
+    gap: 4px;
+  }
+  .guide-toc .eyebrow {
+    margin-bottom: 8px;
+  }
+  .worked-example {
+    grid-template-columns: 1fr;
+  }
+  .example-panel.exact {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .example-panel {
+    padding: 22px 18px;
+  }
+  .guide-table th,
+  .guide-table td {
+    padding: 12px 6px;
+    font-size: 12px;
+  }
+  .guide-table th:first-child {
+    width: 56%;
+  }
+  .formula-note,
+  .closing-note {
+    padding: 22px 18px;
+  }
+  .guide-page .source-link {
+    font-size: 11px;
+    padding-block: 12px;
+  }
+}

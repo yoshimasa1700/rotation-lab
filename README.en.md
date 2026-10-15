@@ -10,6 +10,8 @@ An interactive learning lab for Euler angles, unit quaternions, SO(3), and SE(3)
 - **Rotation order:** compare Rx Ry and Ry Rx using known quarter-turns.
 - **Rigid transforms:** translation/rotation order, homogeneous matrices, point coordinates, and inverse transforms.
 
+A [Japanese optimization guide](https://yoshimasa1700.github.io/rotation-lab/optimization.html) explains valid rotations, local Lie algebra updates, quaternion storage, and limitations, with a worked 30° example and links back to experiments.
+
 Right-handed coordinates, column vectors, active rotations, `R = Rz(yaw) Ry(pitch) Rx(roll)`. Mathematical quaternion order is `(w,x,y,z)` with Hamilton multiplication. Three.js conversion is explicit at the boundary.
 
 Use Node 24 LTS (minimum 22.12):
@@ -24,7 +26,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The independent TypeScript math core is covered by 22 tests: known rotations, singularities, interpolation edge cases, SE(3) inverse/composition, 200 fixed-seed invariant checks, and independent Three.js comparisons. Nine browser tests additionally cover keyboard focus, character-by-character decimal entry, interpolation, rigid transforms, text contrast, touch targets, and 320px layouts. GitHub Actions runs both suites before deploying `main` to Pages.
+The independent TypeScript math core is covered by 22 tests: known rotations, singularities, interpolation edge cases, SE(3) inverse/composition, 200 fixed-seed invariant checks, and independent Three.js comparisons. Eleven browser tests additionally cover keyboard focus, character-by-character decimal entry, interpolation, rigid transforms, text contrast, touch targets, 320px layouts, navigation to a static optimization guide, and reading it with JavaScript disabled. GitHub Actions runs both suites before deploying `main` to Pages.
 
 WebGL is required for 3D; numerical controls remain available without it. Near-identical SLERP inputs use normalized linear interpolation. General matrix/quaternion editing, inverse Euler conversion, Lie algebra tools, and a fully multilingual UI are outside this version.
 

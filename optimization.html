@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="なぜ回転・姿勢の最適化ではSO(3)・SE(3)を使うのか。行列への加算との違い、Lie代数での局所更新、Quaternionとの関係を数値例で学ぶ。"
+    />
+    <title>なぜ最適化にSO(3)・SE(3)？ — Rotation Lab</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <link rel="stylesheet" href="./src/optimization.css" />
+  </head>
+  <body class="guide-page">
+    <header class="masthead">
+      <a href="./index.html#A" class="brand" aria-label="Rotation Lab ホーム"
+        ><span class="brand-mark">↗</span> Rotation Lab<span class="edition"
+          >FIELD NOTES / 02</span
+        ></a
+      >
+      <a href="./index.html#A" class="source-link">実験へ戻る ↗</a>
+    </header>
+    <main class="guide">
+      <header class="guide-hero">
+        <p class="eyebrow">READING NOTE 01 / OPTIMIZATION</p>
+        <h1>最適化でも、<br />回転を<em>回転のまま。</em></h1>
+        <p class="guide-deck">なぜSO(3)・SE(3)が好まれるのか？</p>
+        <p>
+          回転や位置姿勢を推定するときは、<strong>正しい幾何を保ちながら、必要な自由度だけを動かす</strong>と扱いやすくなります。そのための道具が、SO(3)・SE(3)上の状態と、Lie代数による局所更新です。
+        </p>
+        <div class="guide-meta">
+          <span>ベクトル・行列の基礎から</span><span>約8分で読む</span
+          ><span>右手系 / 列ベクトル / 能動回転</span>
+        </div>
+      </header>
+      <nav class="guide-toc" aria-label="このページの目次">
+        <span class="eyebrow">CONTENTS</span
+        ><a href="#addition">01 加算の落とし穴</a
+        ><a href="#local">02 小さく解いて合成</a
+        ><a href="#quaternion">03 Quaternionとの関係</a
+        ><a href="#limits">04 解決できることの境界</a>
+      </nav>
+      <article class="guide-body">
+        <section id="addition" class="guide-section">
+          <p class="eyebrow">01 / KEEP THE GEOMETRY</p>
+          <h2>行列に足すだけでは、<br />長さまで変わってしまう。</h2>
+          <p>
+            回転行列Rは、RᵀR = Iかつdet R =
+            1を満たします。9個の数を自由に変えてよい行列ではありません。これらの条件を満たす3×3行列の集合が<strong>SO(3)</strong>です。
+          </p>
+          <p>
+            たとえば、恒等姿勢からZ軸に30°回す場合。θ = π/6 ≈
+            0.5236として、微小回転の一次近似をそのまま新しい行列にする方法と、指数写像で回転を作る方法を比べます。
+          </p>
+          <div class="worked-example">
+            <div class="example-panel">
+              <p class="eyebrow">一次近似をそのまま使う</p>
+              <h3>I + [δθ]×</h3>
+              <pre
+                aria-label="加算した行列。第1行1、マイナス0.5236、0。第2行0.5236、1、0。第3行0、0、1。"
+              >
+⎡ 1.0000 −0.5236  0 ⎤
+⎢ 0.5236  1.0000  0 ⎥
+⎣ 0       0       1 ⎦</pre>
+              <p class="example-result">
+                det ≈ <strong>1.2742</strong><br />単位Xベクトルの長さ ≈
+                <strong>1.1288</strong>
+              </p>
+              <p>回るだけでなく、XY平面内で伸びてしまう。</p>
+            </div>
+            <div class="example-panel exact">
+              <p class="eyebrow">指数写像で回転を作る</p>
+              <h3>exp([δθ]×)</h3>
+              <pre
+                aria-label="Z軸30度の回転行列。第1行0.8660、マイナス0.5000、0。第2行0.5000、0.8660、0。第3行0、0、1。"
+              >
+⎡ 0.8660 −0.5000  0 ⎤
+⎢ 0.5000  0.8660  0 ⎥
+⎣ 0       0       1 ⎦</pre>
+              <p class="example-result">
+                det = <strong>1</strong><br />単位Xベクトルの長さ =
+                <strong>1</strong>
+              </p>
+              <p>長さを保って、ちょうど30°回る。</p>
+            </div>
+          </div>
+          <p class="guide-caption">
+            δθ = (0, 0,
+            π/6)。数値は表示用に丸めています。一次近似の誤差を見やすくするため、ここでは30°を使っています。
+          </p>
+          <p>
+            一次近似は微分や線形化に役立ちます。ただし、加算だけで姿勢を更新し続けると回転の条件を外れます。指数写像による更新は、理論上その条件を保ちます。実装では浮動小数点誤差への配慮も必要です。
+          </p>
+        </section>
+        <section id="local" class="guide-section">
+          <p class="eyebrow">02 / SOLVE LOCALLY, COMPOSE GLOBALLY</p>
+          <h2>状態を保ち、<br />「いまからの変化」だけを解く。</h2>
+          <p>
+            <strong>SO(3)・SE(3)</strong
+            >は回転・剛体変換の集合（Lie群）。小文字の<strong>so(3)・se(3)</strong>は、恒等変換での接空間（Lie代数）です。基底を選ぶと、それぞれ3成分・6成分のベクトルで表せます。最適化ではこの局所的な増分を求め、現在の状態に合成します。
+          </p>
+          <div class="formula-note">
+            <span>回転の更新 / 3成分</span>
+            <p>R<sub>new</sub> = R exp([δθ]×)</p>
+            <span>位置姿勢の更新 / 6成分</span>
+            <p>T<sub>new</sub> = T exp(δξ̂)</p>
+          </div>
+          <p>
+            [δθ]×は、ベクトルとの外積を行列積として表す歪対称行列です。δξ = (δρ,
+            δθ)と並べると、δξ̂は左上に[δθ]×、右上にδρ、最下行に0を持つ4×4行列になります。<strong>指数写像exp</strong>が、その増分を有効な回転・剛体変換に変えます。
+          </p>
+          <aside class="margin-note">
+            <strong>平行移動の3成分にも、規約がある。</strong>
+            <p>
+              δρは接空間での並進成分です。SE(3)の指数写像では回転と並進が結びつくため、一般にexp(δξ̂)の右上の並進ベクトルとδρは一致しません。
+            </p>
+          </aside>
+          <h3>最小二乗法の、ひとつの反復。</h3>
+          <p>
+            推定姿勢Tでの予測と観測の差を、残差r(T)とします。Gauss–Newton法やLevenberg–Marquardt法では、次の手順を繰り返せます。
+          </p>
+          <ol class="iteration">
+            <li>
+              <strong>現在の姿勢の近くで線形化する</strong>
+              <p>
+                r(T exp(δξ̂)) ≈ r(T) +
+                Jδξ。Jは局所増分に対する残差のヤコビアンです。
+              </p>
+            </li>
+            <li>
+              <strong>6成分の修正量を求める</strong>
+              <p>
+                線形化した残差を小さくするδξを求めます。LM法では減衰を加え、更新の大きさを調整します。
+              </p>
+            </li>
+            <li>
+              <strong>変換を合成し、そこで再び線形化する</strong>
+              <p>
+                T ← T exp(δξ̂)。次の反復では、更新後のTを新しい基準にします。
+              </p>
+            </li>
+          </ol>
+          <p>
+            回転だけなら未知の増分は3成分です。行列の9成分や同次行列の16成分を独立に最適化する場合に比べ、冗長な変数や回転条件の制約を避けられます。合成・逆変換・座標変換も同じ規約で記述できます。
+          </p>
+          <p class="reference-note">
+            Lie群・接空間・局所更新の背景：<a
+              href="https://arxiv.org/html/1812.01537v9"
+              >A micro Lie theory for state estimation in robotics</a
+            >（Solàほか）。
+          </p>
+          <details class="guide-details">
+            <summary>右から掛ける？ 左から掛ける？</summary>
+            <p>
+              このページではTが物体座標を世界座標へ写すとします。T
+              exp(δξ̂)は物体側の座標で表した増分、exp(δξ̂)
+              Tは世界側の座標で表した増分です。どちらも使えますが、残差・ヤコビアン・共分散の規約をそろえる必要があります。
+            </p>
+            <p>
+              また、回転はSO(3)上で更新し、位置は世界座標の3成分として加算するSO(3)
+              ×
+              ℝ³の方法も有効です。SE(3)の指数写像だけが唯一の選択肢ではありません。
+            </p>
+          </details>
+        </section>
+        <section id="quaternion" class="guide-section">
+          <p class="eyebrow">03 / REPRESENTATION ≠ UPDATE</p>
+          <h2>Quaternionも、この方法と両立する。</h2>
+          <p>
+            「QuaternionかSO(3)か」という二者択一ではありません。単位QuaternionはSO(3)の要素を表す方法です。<strong>保存には4成分のQuaternion、最適化の更新には3成分の局所ベクトル</strong>を使えます。
+          </p>
+          <div class="guide-table-wrap">
+            <table class="guide-table">
+              <caption>
+                保存する成分数と、局所更新の自由度
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">状態の保存方法</th>
+                  <th scope="col">保存</th>
+                  <th scope="col">局所更新</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">回転行列</th>
+                  <td>9</td>
+                  <td>3</td>
+                </tr>
+                <tr>
+                  <th scope="row">単位Quaternion</th>
+                  <td>4</td>
+                  <td>3</td>
+                </tr>
+                <tr>
+                  <th scope="row">同次変換行列</th>
+                  <td>16</td>
+                  <td>6</td>
+                </tr>
+                <tr>
+                  <th scope="row">Quaternion＋位置</th>
+                  <td>7</td>
+                  <td>6</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            局所ベクトルから単位Quaternion δqを作り、q<sub>new</sub> = q ⊗
+            δqと合成すれば、行列を保存せずに回転を更新できます。単位ノルムの維持やqと−qが同じ回転を表す点には、引き続き注意します。
+          </p>
+          <p class="reference-note">
+            実装例として、Ceres Solverの<a
+              href="https://ceres-solver.readthedocs.io/latest/nnls_modeling.html#quaternionmanifold"
+              >QuaternionManifold</a
+            >も、保存空間4次元・接空間3次元を区別しています。増分のスケールや積の向きはライブラリの定義を確認してください。
+          </p>
+          <a class="experiment-link" href="./index.html#A"
+            >実験Aで表現とq ↔ −qを確かめる →</a
+          >
+          <h3>Euler角では、なぜ難しくなる？</h3>
+          <p>
+            このサイトのZYX規約ではpitch =
+            ±90°で、rollとyawの変化が独立でなくなります。異なるパラメータ方向が同じ姿勢変化を表すため、Euler角をそのまま最適化するヤコビアンが退化し、周辺でも数値的に扱いにくくなります。
+          </p>
+          <p>
+            現在の姿勢を基準とする3成分の局所更新なら、姿勢がEuler角のpitch =
+            90°に相当していても、この座標表現に由来する特異点を避けられます。ただし、観測そのものに情報がなければ、その不定性は残ります。
+          </p>
+          <a class="experiment-link" href="./index.html#B"
+            >実験Bで軸の重なりを見る →</a
+          >
+        </section>
+        <section id="limits" class="guide-section">
+          <p class="eyebrow">04 / KNOW THE LIMITS</p>
+          <h2>幾何を整えても、解けない問題は残る。</h2>
+          <p>
+            局所更新は、最適化を組み立てやすくする道具です。目的関数が凸になることや、必ず正解へ収束することを保証しません。
+          </p>
+          <ul class="limits-list">
+            <li>
+              <strong>初期値と局所解。</strong
+              >初期姿勢が遠い、対応点が間違っているなどの場合、別の解へ収束したり発散したりします。
+            </li>
+            <li>
+              <strong>観測不足とゲージ自由度。</strong
+              >たとえば点が一直線上なら、その直線まわりの回転を決められない場合があります。SLAMでは基準座標の固定なども必要です。
+            </li>
+            <li>
+              <strong>回転と並進の尺度。</strong
+              >ラジアンとメートルを単純に同列に扱うと重みが不適切になり得ます。残差の意味や観測の共分散に応じた設計が必要です。
+            </li>
+            <li>
+              <strong>大域的な座標の限界。</strong
+              >SO(3)全体を特異点なく一意な3成分で表すことはできません。主値の対数写像には回転角πで曖昧さがあり、小さな増分での更新と大きな姿勢差の扱いを区別します。
+            </li>
+          </ul>
+          <div class="closing-note">
+            <p class="eyebrow">持ち帰る考え方</p>
+            <p>
+              <strong
+                >姿勢はSO(3)・SE(3)上に置く。<br />更新量は3・6成分で解く。<br />指数写像で変換にして、合成する。</strong
+              >
+            </p>
+            <p>保存形式と、最適化で動かす座標を分けて考えることが鍵です。</p>
+          </div>
+          <a class="experiment-link" href="./index.html#E"
+            >実験Eで剛体変換の合成を確かめる →</a
+          >
+          <p class="guide-caption">
+            このページは考え方の解説です。Rotation
+            Labの実験A〜Eには最適化ソルバーは含まれていません。
+          </p>
+        </section>
+      </article>
+    </main>
+    <footer>
+      <span>Rotation Lab · 数学を、手触りに。</span
+      ><a href="./index.html#A">5つの実験へ戻る ↗</a
+      ><a href="https://github.com/yoshimasa1700/rotation-lab">GitHub ↗</a>
+    </footer>
+  </body>
+</html>

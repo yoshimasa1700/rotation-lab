@@ -36,6 +36,7 @@
       <nav class="guide-toc" aria-label="このページの目次">
         <span class="eyebrow">CONTENTS</span
         ><a href="#lie-basics">まずは：リー群とリー代数</a
+        ><a href="#special">なぜSpecial？</a
         ><a href="#addition">01 加算の落とし穴</a
         ><a href="#local">02 小さく解いて合成</a
         ><a href="#quaternion">03 Quaternionとの関係</a
@@ -61,6 +62,53 @@
           <p>
             さらに、集合が滑らかな空間になっていて、合成と逆操作も滑らかなら<strong>リー群</strong>です。変換の変化を微分で扱えます。回転の集合SO(3)と、回転＋平行移動の集合SE(3)は、その具体例です。
           </p>
+          <section id="special" aria-labelledby="special-title">
+            <h3 id="special-title">SO・SEの「Special」は、なぜ付く？</h3>
+            <p>
+              <strong>SOはSpecial Orthogonal、SEはSpecial Euclideanの略</strong
+              >です。Orthogonal（直交）は長さや角度を保つ行列、Euclidean（ユークリッド）は通常の空間で距離を保つ変換を指します。(3)は空間が3次元という意味で、自由度の数ではありません。
+            </p>
+            <p>
+              直交行列の集合O(3)には、向きを保つ変換と、鏡に映すように向きを反転する変換が含まれます。<strong>行列式が＋1のものだけに限定した集合がSO(3)</strong>です。この条件を表す言葉が「Special」です。
+            </p>
+            <div class="guide-table-wrap">
+              <table class="guide-table">
+                <caption>
+                  O(3)に含まれる2種類の変換
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">変換</th>
+                    <th scope="col">行列式</th>
+                    <th scope="col">SO(3)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">向きを保つ（回転）</th>
+                    <td>＋1</td>
+                    <td>含む</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">向きを反転する（鏡映など）</th>
+                    <td>−1</td>
+                    <td>含まない</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              たとえばX座標だけを反転するM = diag(−1, 1, 1)は、点(x, y, z)を(−x,
+              y, z)に写します。長さや角度は保ちますが、det M =
+              −1で、右手の形を左手の形に変えてしまいます。<strong>右手をどれだけ回しても左手にはならない</strong>ので、これは回転ではありません。
+            </p>
+            <p>
+              SE(3)のSpecialも、鏡映などの向きの反転を除く意味です。回転部分の行列式が＋1である、回転と平行移動の組を扱います。「特別に優れている」という意味ではなく、条件で対象を絞っているという意味です。
+            </p>
+            <p class="guide-caption">
+              小文字のso(3)・se(3)は別の略語ではなく、SO(3)・SE(3)に対応するリー代数の記号です。
+            </p>
+          </section>
           <h3>リー代数：ここから、どう変えるか。</h3>
           <p>
             「カメラをあと1°右へ向けたい」という修正量を、ベクトルのように計算する場所がリー代数です。回転に対応する<strong>so(3)は3成分</strong>、回転＋移動に対応する<strong>se(3)は6成分</strong>で表せます。大文字のSO・SEは変換の集合、小文字のso・seは対応するリー代数を指します。

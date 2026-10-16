@@ -29,12 +29,13 @@
           回転や位置姿勢を推定するときは、<strong>正しい幾何を保ちながら、必要な自由度だけを動かす</strong>と扱いやすくなります。そのための道具が、SO(3)・SE(3)上の状態と、Lie代数による局所更新です。
         </p>
         <div class="guide-meta">
-          <span>ベクトル・行列の基礎から</span><span>約10分で読む</span
+          <span>ベクトル・行列の基礎から</span><span>約13分で読む</span
           ><span>右手系 / 列ベクトル / 能動回転</span>
         </div>
       </header>
       <nav class="guide-toc" aria-label="このページの目次">
         <span class="eyebrow">CONTENTS</span
+        ><a href="#representations">回転の表現と定義</a
         ><a href="#lie-basics">まずは：リー群とリー代数</a
         ><a href="#special">なぜSpecial？</a
         ><a href="#addition">01 加算の落とし穴</a
@@ -43,6 +44,119 @@
         ><a href="#limits">04 解決できることの境界</a>
       </nav>
       <article class="guide-body">
+        <section
+          id="representations"
+          class="guide-section"
+          aria-labelledby="representations-title"
+        >
+          <p class="eyebrow">START / 回転を表す言葉</p>
+          <h2 id="representations-title">同じ回転を、違う形で表す。</h2>
+          <p>
+            <strong
+              >Euler角・単位Quaternion・回転行列は、3次元の回転を表す方法</strong
+            >です。ここでは右手系・列ベクトル・能動回転を使います。能動回転とは、基準の座標軸を固定して、点や物体そのものを回す考え方です。
+          </p>
+          <h3>Euler角：順序を決めた3つの角度。</h3>
+          <p>
+            決められた軸と順序に従う3回の回転で、姿勢を表します。このサイトではroll・pitch・yawを使い、R
+            = Rz(yaw) Ry(pitch)
+            Rx(roll)と定義します。固定された世界の軸で考えると、X → Y →
+            Zの順に作用します。同じ数値でも、回転順序の規約を変えると別の姿勢になります。
+          </p>
+          <p>
+            人が角度を入力・理解しやすい一方、このZYX規約ではpitch =
+            ±90°でrollとyawの変化が独立でなくなるジンバルロックが起きます。また、異なる角度の組が同じ回転を表すことがあります。
+          </p>
+          <h3>Quaternion：4成分を持つ数。</h3>
+          <p>
+            Quaternion（四元数）はq = w + xi + yj + zkと書く数で、実数w, x, y,
+            zの4成分を持ちます。虚数単位はi² = j² = k² = ijk =
+            −1を満たし、積は一般に順序を交換できません。<strong
+              >回転に使うのは、w² + x² + y² + z² =
+              1を満たす単位Quaternion</strong
+            >です。一般のQuaternionすべてがそのまま回転を表すわけではありません。
+          </p>
+          <p>
+            単位軸u = (uₓ, uᵧ, u_z)のまわりに角度θだけ回す回転は、成分順を(w, x,
+            y, z)として、q = (cos(θ/2), u
+            sin(θ/2))で表せます。軸が回す方向、θが回す角度です。点pを純虚Quaternion(0,
+            p)とみなすと、回転後の点はq ⊗ (0, p) ⊗ q⁻¹のベクトル部分になります。
+          </p>
+          <p>
+            4成分に単位ノルムの制約があるため、自由度は3です。qと−qは同じ回転を表します。単位Quaternionの集合自体もリー群ですが、SO(3)の部分集合ではありません。SO(3)の各回転へ2対1で対応する「二重被覆」という関係です。
+          </p>
+          <h3>回転行列：点を回す3×3行列。</h3>
+          <p>
+            回転行列Rは、RᵀR = Iかつdet R =
+            1を満たす3×3の実行列です。点pに掛けるとp′ =
+            Rpとなり、長さ・角度・空間の向きを保って回します。行列の各列は、回転後のX・Y・Z単位基底ベクトルです。
+          </p>
+          <p>
+            保存する数は9個ですが、条件に縛られるため自由度は3です。この条件を満たすすべての行列の集合が<strong>SO(3)</strong>。SO(3)という箱にQuaternionと行列が別々に入っているのではなく、単位QuaternionからSO(3)の回転行列へ変換できます。
+          </p>
+          <div class="guide-table-wrap">
+            <table class="guide-table">
+              <caption>
+                回転の保存成分数と自由度
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">表現</th>
+                  <th scope="col">成分</th>
+                  <th scope="col">自由度</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Euler角</th>
+                  <td>3</td>
+                  <td>3※</td>
+                </tr>
+                <tr>
+                  <th scope="row">単位Quaternion</th>
+                  <td>4</td>
+                  <td>3</td>
+                </tr>
+                <tr>
+                  <th scope="row">回転行列</th>
+                  <td>9</td>
+                  <td>3</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="guide-caption">
+            ※回転自体の自由度は3。Euler角は特異点で局所的な表現が退化します。
+          </p>
+          <aside class="margin-note">
+            <strong>例：Z軸に90°回す。</strong>
+            <p>
+              Euler角は(roll, pitch, yaw) = (0°, 0°, 90°)。単位Quaternionは(w,
+              x, y, z) = (√2/2, 0, 0, √2/2)。回転行列の3行は(0, −1, 0)、(1, 0,
+              0)、(0, 0, 1)です。どの表現でも、点(1, 0, 0)は(0, 1,
+              0)へ移ります。
+            </p>
+          </aside>
+          <h3>同次変換行列：回転に位置を加える。</h3>
+          <p>
+            回転Rと平行移動tを、左上にR、右上にt、最下行に(0, 0, 0,
+            1)を置く4×4行列Tにまとめます。点への作用はp′ = Rp +
+            tで、拡張した列ベクトル(p,
+            1)を使えば行列積として書けます。この形の剛体変換全体が<strong>SE(3)</strong>で、自由度は回転3＋移動3＝6です。
+          </p>
+          <a class="experiment-link" href="./index.html#A"
+            >実験Aで3つの表現を見比べる →</a
+          >
+          <p class="reference-note">
+            本サイトの<a
+              href="https://github.com/yoshimasa1700/rotation-lab/blob/main/docs/conventions.md"
+              >回転の規約</a
+            >と、Solàほかの<a href="https://arxiv.org/html/1812.01537v9#A2"
+              >3次元回転群の解説</a
+            >も参照してください。
+          </p>
+        </section>
+
         <section
           id="lie-basics"
           class="guide-section"

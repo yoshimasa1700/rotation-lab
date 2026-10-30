@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Follow one point from camera coordinates to world coordinates, back through an inverse transform, and onto an image. A worked example and a 45-minute exercise connect frames, inverse translation, and camera projection."
+    />
+    <title>
+      Point transforms, inverse transforms &amp; camera projection — Rotation
+      Lab
+    </title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <link rel="stylesheet" href="./src/optimization.css" />
+    <link rel="stylesheet" href="./src/point-transforms.css" />
+    <link
+      rel="alternate"
+      hreflang="ja"
+      href="https://yoshimasa1700.github.io/rotation-lab/point-transforms.html"
+    />
+  </head>
+  <body class="guide-page point-note">
+    <header class="masthead">
+      <a href="./index.html#E" class="brand" aria-label="Rotation Lab home"
+        ><span class="brand-mark">↗</span> Rotation Lab<span class="edition"
+          >FIELD NOTES / 03</span
+        ></a
+      >
+      <nav class="note-header-links" aria-label="Page navigation">
+        <a href="./index.html#E" class="source-link">Back to the lab (JA) ↗</a>
+        <a
+          href="./point-transforms.html"
+          rel="alternate"
+          hreflang="ja"
+          lang="ja"
+          class="source-link"
+          >日本語</a
+        >
+      </nav>
+    </header>
+    <main class="guide">
+      <header class="guide-hero">
+        <p class="eyebrow">READING NOTE 02 / POINTS &amp; PROJECTION</p>
+        <h1>From point coordinates<br /><em>to camera pixels.</em></h1>
+        <p class="guide-deck">
+          Follow one point to understand the order of operations.
+        </p>
+        <p>
+          Express a camera-frame point in world coordinates, recover it with an
+          inverse transform, then find its image position. This note records
+          three sticking points from a hand calculation on October 30, 2026,
+          with the intermediate steps.
+        </p>
+        <div class="guide-meta">
+          <time datetime="2026-10-30">2026.10.30</time
+          ><span>8-minute read / 45-minute practice</span
+          ><span>Column vectors / Changes of frame</span>
+        </div>
+        <div class="note-route" aria-label="Learning sequence">
+          <span>C → W: transform</span><span>W → C: inverse</span
+          ><span>C → image: projection</span>
+        </div>
+      </header>
+      <nav class="guide-toc" aria-label="Contents">
+        <span class="eyebrow">CONTENTS</span
+        ><a href="#conventions">00 Frames &amp; notation</a
+        ><a href="#forward">01 Forward transform</a
+        ><a href="#inverse">02 Inverse transform</a
+        ><a href="#projection">03 Camera projection</a
+        ><a href="#pitfalls">04 Three sticking points</a
+        ><a href="#practice">05 Try it in 45 minutes</a>
+      </nav>
+      <article class="guide-body">
+        <section
+          id="conventions"
+          class="guide-section"
+          aria-labelledby="conventions-title"
+        >
+          <p class="eyebrow">00 / BEFORE CALCULATING</p>
+          <h2 id="conventions-title">
+            Same point. A different coordinate frame.
+          </h2>
+          <p>
+            In this note, a coordinate transform
+            <strong
+              >keeps the point fixed in space and expresses it in another
+              frame.</strong
+            >
+            This differs from an active rotation, which moves the point while
+            keeping the reference axes fixed. The equations can look alike, so
+            identify the frames and subscripts first.
+          </p>
+          <dl class="pt-definitions">
+            <dt>W / C</dt>
+            <dd>
+              W is the world frame; C is the camera frame. The camera uses
+              right-handed axes: <strong>x right, y down, z forward.</strong>
+            </dd>
+            <dt>
+              <span class="pt-symbol">p<sub>W</sub> / p<sub>C</sub></span>
+            </dt>
+            <dd>
+              The same point expressed in world / camera coordinates. All
+              vectors are <strong>column vectors</strong>, also written as (1,
+              0, 4)ᵀ.
+            </dd>
+            <dt>
+              <span class="pt-symbol">R<sub>WC</sub></span>
+            </dt>
+            <dd>
+              A rotation matrix that converts a vector expressed in C into its
+              representation in W.
+            </dd>
+            <dt>
+              <span class="pt-symbol">t<sub>WC</sub></span>
+            </dt>
+            <dd>
+              <strong>The camera origin expressed in world coordinates.</strong>
+              Point coordinates and translations are measured in meters.
+            </dd>
+          </dl>
+          <p>
+            The subscripts mean “output frame, input frame.” In
+            homogeneous-transform notation,
+            <span class="pt-symbol">T<sub>WC</sub> = T<sub>W←C</sub></span
+            >, or <code>T_W_from_C</code>.
+          </p>
+          <div class="pt-given" aria-label="Values used in this example">
+            <div class="pt-equation">
+              <span>p<sub>C</sub> =</span
+              ><span class="pt-matrix" aria-label="Column vector 1, 0, 4"
+                ><span>1</span><span>0</span><span>4</span></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span>R<sub>WC</sub> =</span
+              ><span
+                class="pt-matrix"
+                style="--columns: 3"
+                aria-label="Matrix: row 1 is 0, −1, 0; row 2 is 1, 0, 0; row 3 is 0, 0, 1"
+                ><span>0</span><span>−1</span><span>0</span><span>1</span
+                ><span>0</span><span>0</span><span>0</span><span>0</span
+                ><span>1</span></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span>t<sub>WC</sub> =</span
+              ><span class="pt-matrix" aria-label="Column vector 1, 2, 0"
+                ><span>1</span><span>2</span><span>0</span></span
+              >
+            </div>
+          </div>
+          <p class="guide-caption">
+            The transform determines the world-axis directions. We do not impose
+            an additional convention such as world y pointing vertically upward.
+          </p>
+        </section>
+
+        <section
+          id="forward"
+          class="guide-section"
+          aria-labelledby="forward-title"
+        >
+          <p class="eyebrow">01 / CAMERA → WORLD</p>
+          <h2 id="forward-title">Align the axes, then add the origin.</h2>
+          <div class="pt-equation pt-result">
+            <span
+              >p<sub>W</sub> = R<sub>WC</sub> p<sub>C</sub> + t<sub
+                >WC</sub
+              ></span
+            >
+          </div>
+          <p>
+            <span class="pt-symbol">R<sub>WC</sub> p<sub>C</sub></span> is the
+            vector from the camera origin to the point, now expressed along the
+            world axes. Adding the camera origin’s world position,
+            <span class="pt-symbol">t<sub>WC</sub></span
+            >, gives the point’s position relative to the world origin.
+          </p>
+          <div class="pt-working">
+            <p>
+              ① Apply the rotation matrix. Each component is a row–column dot
+              product.
+            </p>
+            <div class="pt-equation">
+              <span>R<sub>WC</sub> p<sub>C</sub> =</span
+              ><span class="pt-matrix" aria-label="Dot products for each row"
+                ><span>0·1 − 1·0 + 0·4</span><span>1·1 + 0·0 + 0·4</span
+                ><span>0·1 + 0·0 + 1·4</span></span
+              ><span class="pt-term"
+                >=
+                <span class="pt-matrix" aria-label="Column vector 0, 1, 4"
+                  ><span>0</span><span>1</span><span>4</span></span
+                ></span
+              >
+            </div>
+            <p>② Add the origin’s position.</p>
+            <div class="pt-equation">
+              <span>p<sub>W</sub> =</span
+              ><span class="pt-matrix"
+                ><span>0</span><span>1</span><span>4</span></span
+              ><span class="pt-term"
+                >+
+                <span class="pt-matrix"
+                  ><span>1</span><span>2</span><span>0</span></span
+                ></span
+              ><span class="pt-term"
+                >=
+                <span class="pt-matrix" aria-label="Column vector 1, 3, 4"
+                  ><span>1</span><span>3</span><span>4</span></span
+                ></span
+              >
+            </div>
+          </div>
+          <p>
+            <strong>The point has not moved.</strong> Its camera coordinates are
+            (1, 0, 4)ᵀ, and its world coordinates are (1, 3, 4)ᵀ.
+          </p>
+        </section>
+
+        <section
+          id="inverse"
+          class="guide-section"
+          aria-labelledby="inverse-title"
+        >
+          <p class="eyebrow">02 / WORLD → CAMERA</p>
+          <h2 id="inverse-title">
+            Subtract the translation, then undo the rotation.
+          </h2>
+          <p>
+            Rearrange the original equation to isolate
+            <span class="pt-symbol">p<sub>C</sub></span
+            >. For a rotation matrix, the inverse is its transpose:
+            <span class="pt-symbol">R⁻¹ = Rᵀ</span>.
+          </p>
+          <div class="pt-working">
+            <div class="pt-equation">
+              <span
+                >p<sub>W</sub> − t<sub>WC</sub> = R<sub>WC</sub> p<sub
+                  >C</sub
+                ></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span
+                >p<sub>C</sub> = R<sub>WC</sub>ᵀ (p<sub>W</sub> −
+                t<sub>WC</sub>)</span
+              >
+            </div>
+            <div class="pt-equation">
+              <span
+                >= R<sub>WC</sub>ᵀ p<sub>W</sub> − R<sub>WC</sub>ᵀ t<sub
+                  >WC</sub
+                ></span
+              >
+            </div>
+          </div>
+          <p>
+            To write the inverse as
+            <span class="pt-symbol"
+              >p<sub>C</sub> = R<sub>CW</sub> p<sub>W</sub> + t<sub
+                >CW</sub
+              ></span
+            >, compute both of these terms:
+          </p>
+          <div class="pt-equation pt-result">
+            <span>R<sub>CW</sub> = R<sub>WC</sub>ᵀ</span
+            ><span>t<sub>CW</sub> = −R<sub>CW</sub> t<sub>WC</sub></span>
+          </div>
+          <p>
+            <strong>Negating the translation alone is not enough.</strong>
+            <span class="pt-symbol">t<sub>CW</sub></span> is “the world origin
+            expressed in camera coordinates.” It is expressed in a different
+            frame from <span class="pt-symbol">t<sub>WC</sub></span
+            >, so it must also be rotated into that frame.
+          </p>
+          <div class="pt-given">
+            <div class="pt-equation">
+              <span>R<sub>CW</sub> =</span
+              ><span
+                class="pt-matrix"
+                style="--columns: 3"
+                aria-label="Matrix: row 1 is 0, 1, 0; row 2 is −1, 0, 0; row 3 is 0, 0, 1"
+                ><span>0</span><span>1</span><span>0</span><span>−1</span
+                ><span>0</span><span>0</span><span>0</span><span>0</span
+                ><span>1</span></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span>t<sub>CW</sub> = −</span
+              ><span class="pt-matrix"
+                ><span>2</span><span>−1</span><span>0</span></span
+              ><span class="pt-term"
+                >=
+                <span class="pt-matrix"
+                  ><span>−2</span><span>1</span><span>0</span></span
+                ></span
+              >
+            </div>
+          </div>
+          <p>
+            First compute
+            <span class="pt-symbol">R<sub>CW</sub> p<sub>W</sub></span> on its
+            own. Its second component is
+            <strong>−1 × 1 + 0 × 3 + 0 × 4 = −1</strong>. Do not carry over the
+            original y-coordinate of 3.
+          </p>
+          <div class="pt-equation">
+            <span>p<sub>C</sub> =</span
+            ><span class="pt-matrix"
+              ><span>3</span><span>−1</span><span>4</span></span
+            ><span class="pt-term"
+              >+
+              <span class="pt-matrix"
+                ><span>−2</span><span>1</span><span>0</span></span
+              ></span
+            ><span class="pt-term"
+              >=
+              <span class="pt-matrix" aria-label="Column vector 1, 0, 4"
+                ><span>1</span><span>0</span><span>4</span></span
+              ></span
+            >
+          </div>
+          <p>
+            The original coordinates are recovered. As another check, first
+            calculate
+            <span class="pt-symbol"
+              >p<sub>W</sub> − t<sub>WC</sub> = (0, 1, 4)ᵀ</span
+            >, then apply the inverse rotation.
+          </p>
+          <a href="./index.html#E" class="experiment-link"
+            >Explore homogeneous and inverse transforms in Experiment E (JA)
+            →</a
+          >
+        </section>
+
+        <section
+          id="projection"
+          class="guide-section"
+          aria-labelledby="projection-title"
+        >
+          <p class="eyebrow">03 / CAMERA → IMAGE</p>
+          <h2 id="projection-title">Turn coordinate ratios into pixels.</h2>
+          <p>
+            Use a pinhole camera without lens distortion. Projection takes
+            <strong>camera coordinates</strong>,
+            <span class="pt-symbol"
+              >p<sub>C</sub> = (X<sub>C</sub>, Y<sub>C</sub>,
+              Z<sub>C</sub>)ᵀ</span
+            >. A point given in world coordinates must first be transformed into
+            the camera frame.
+          </p>
+          <p>
+            Image u increases to the right, and v downward. The focal lengths
+            are
+            <span class="pt-symbol">f<sub>x</sub> = f<sub>y</sub> = 400</span>;
+            the principal point is
+            <span class="pt-symbol"
+              >(c<sub>x</sub>, c<sub>y</sub>) = (320, 240)</span
+            >. These values and the image coordinates are measured in pixels.
+          </p>
+          <div class="pt-equation pt-result">
+            <span class="pt-term"
+              ><span>u = f<sub>x</sub></span>
+              <span class="pt-fraction"
+                ><span>X<sub>C</sub></span
+                ><span>Z<sub>C</sub></span></span
+              >
+              <span>+ c<sub>x</sub></span></span
+            ><span class="pt-term"
+              ><span>v = f<sub>y</sub></span>
+              <span class="pt-fraction"
+                ><span>Y<sub>C</sub></span
+                ><span>Z<sub>C</sub></span></span
+              >
+              <span>+ c<sub>y</sub></span></span
+            >
+          </div>
+          <p>
+            <span class="pt-symbol">Z<sub>C</sub></span> is
+            <strong>depth along the optical axis</strong>, not the Euclidean
+            distance
+            <span class="pt-symbol"
+              >√(X<sub>C</sub>² + Y<sub>C</sub>² + Z<sub>C</sub>²)</span
+            >
+            from the camera to the point. This example uses points in front of
+            the camera, with
+            <span class="pt-symbol">Z<sub>C</sub> &gt; 0</span>. At zero the
+            formula is undefined; a negative value places the point behind the
+            camera.
+          </p>
+          <div class="pt-working">
+            <p>Project the point (1, 0, 4)ᵀ:</p>
+            <div class="pt-equation">
+              <span>u = 400 × 1/4 + 320 = 420</span
+              ><span>v = 400 × 0/4 + 240 = 240</span>
+            </div>
+            <p>Double the point’s coordinates to (2, 0, 8)ᵀ:</p>
+            <div class="pt-equation">
+              <span>u = 400 × 2/8 + 320 = 420</span
+              ><span>v = 400 × 0/8 + 240 = 240</span>
+            </div>
+          </div>
+          <p>
+            <strong
+              >Both give (u, v) = (420, 240). The image position is
+              unchanged.</strong
+            >
+            Since 1/4 = 2/8, points in the same direction from the camera
+            project to the same pixel even when their depths differ.
+          </p>
+          <aside class="ray-experiment" aria-labelledby="ray-title">
+            <p class="eyebrow">TRY / SAME RAY, SAME PIXEL</p>
+            <h3 id="ray-title">Move the point along its viewing ray.</h3>
+            <p>
+              Keep the camera pose fixed and set
+              <span class="pt-symbol">p<sub>C</sub> = λ(1, 0, 4)ᵀ</span>.
+              Changing λ moves the point itself in space.
+            </p>
+            <figure class="ray-figure">
+              <svg
+                viewBox="0 0 640 280"
+                role="img"
+                aria-labelledby="ray-svg-title ray-svg-desc"
+              >
+                <title id="ray-svg-title">
+                  Points on one ray from the camera origin
+                </title>
+                <desc id="ray-svg-desc">
+                  A slice at Y equals zero, with Z horizontal and X vertical.
+                  Points (1,0,4) and (2,0,8) lie on the same ray from the camera
+                  origin and both project to image coordinates (420,240).
+                </desc>
+                <path
+                  d="M60 38V220H605"
+                  fill="none"
+                  stroke="#7d8b7d"
+                  stroke-width="2"
+                />
+                <path
+                  d="M54 47L60 36L66 47M596 214L607 220L596 226"
+                  fill="none"
+                  stroke="#7d8b7d"
+                  stroke-width="2"
+                />
+                <path
+                  d="M60 220L590 87.5"
+                  fill="none"
+                  stroke="#397f57"
+                  stroke-width="3"
+                />
+                <path
+                  d="M228 178V220M396 136V220"
+                  fill="none"
+                  stroke="#7d8b7d"
+                  stroke-width="1.5"
+                  stroke-dasharray="5 5"
+                />
+                <g
+                  fill="currentColor"
+                  font-size="24"
+                  font-family="Georgia, serif"
+                >
+                  <text x="12" y="40">
+                    X
+                    <tspan baseline-shift="sub" font-size="16">C</tspan>
+                  </text>
+                  <text x="595" y="254">
+                    Z
+                    <tspan baseline-shift="sub" font-size="16">C</tspan>
+                  </text>
+                  <text x="28" y="250">C</text>
+                  <text x="217" y="250">4</text>
+                  <text x="385" y="250">8</text>
+                  <text x="210" y="209">p</text>
+                  <text x="376" y="169">2p</text>
+                </g>
+                <circle cx="60" cy="220" r="5" fill="#283b36" />
+                <circle
+                  cx="228"
+                  cy="178"
+                  r="6"
+                  fill="#f6f4ec"
+                  stroke="#397f57"
+                  stroke-width="2"
+                />
+                <circle
+                  cx="396"
+                  cy="136"
+                  r="6"
+                  fill="#f6f4ec"
+                  stroke="#397f57"
+                  stroke-width="2"
+                />
+                <circle id="ray-point" cx="228" cy="178" r="8" fill="#a5452e" />
+                <text
+                  id="ray-point-label"
+                  x="238"
+                  y="166"
+                  fill="#a5452e"
+                  font-size="24"
+                  font-family="Georgia, serif"
+                >
+                  λ=1
+                </text>
+              </svg>
+              <figcaption>
+                A schematic XZ slice at Y<sub>C</sub> = 0, not the camera image.
+                The diagram places Z to the right and X upward. Points p and 2p
+                lie on one ray and both project to image coordinates (420, 240).
+              </figcaption>
+            </figure>
+            <fieldset id="ray-controls" hidden>
+              <legend>Change the point’s position</legend>
+              <label class="ray-slider-label" for="ray-scale"
+                ><span>Scale λ (0.5–3)</span
+                ><span
+                  >λ = <output id="scale-value" for="ray-scale">1</output></span
+                ></label
+              >
+              <input
+                id="ray-scale"
+                type="range"
+                min="0.5"
+                max="3"
+                step="0.25"
+                value="1"
+              />
+              <div class="ray-buttons">
+                <button id="ray-double" type="button">Double it (λ=2)</button
+                ><button id="ray-reset" type="button">Reset</button>
+              </div>
+            </fieldset>
+            <dl class="ray-values" aria-live="polite" aria-atomic="true">
+              <div>
+                <dt>Camera coordinates p<sub>C</sub> / m</dt>
+                <dd><output id="camera-point">(1, 0, 4)</output></dd>
+              </div>
+              <div>
+                <dt>World coordinates p<sub>W</sub> / m</dt>
+                <dd><output id="world-point">(1, 3, 4)</output></dd>
+              </div>
+              <div>
+                <dt>Recovered camera coordinates p<sub>C</sub> / m</dt>
+                <dd><output id="recovered-point">(1, 0, 4)</output></dd>
+              </div>
+              <div class="pixel-output">
+                <dt>Image coordinates (u, v) / px</dt>
+                <dd><output id="pixel-point">(420, 240)</output></dd>
+              </div>
+            </dl>
+            <noscript
+              ><p class="guide-caption">
+                The controls require JavaScript. The initial values and the
+                comparison of p with 2p are also available in the text above.
+              </p></noscript
+            >
+          </aside>
+          <h3>Can image coordinates alone determine depth?</h3>
+          <p>
+            <strong
+              >A single image coordinate does not determine a unique
+              depth.</strong
+            >
+            Even with known camera intrinsics, it gives the ratios
+            <span class="pt-symbol">X<sub>C</sub>/Z<sub>C</sub></span> and
+            <span class="pt-symbol">Y<sub>C</sub>/Z<sub>C</sub></span
+            >. Scaling every component of the point by the same positive λ
+            leaves both ratios unchanged.
+          </p>
+          <div class="pt-equation">
+            <span class="pt-term"
+              ><span>u − c<sub>x</sub> = f<sub>x</sub></span>
+              <span class="pt-fraction"
+                ><span>X<sub>C</sub></span
+                ><span>Z<sub>C</sub></span></span
+              ></span
+            ><span class="pt-term"
+              ><span>⇒ Z<sub>C</sub> =</span>
+              <span class="pt-fraction"
+                ><span>f<sub>x</sub> X<sub>C</sub></span
+                ><span>u − c<sub>x</sub></span></span
+              ></span
+            >
+          </div>
+          <p>
+            This rearrangement gives depth only when
+            <strong
+              >X<sub>C</sub> is known from other information and u ≠ c<sub
+                >x</sub
+              ></strong
+            >. With image coordinates alone, X<sub>C</sub> is unknown too.
+            Rearranging an equation does not add depth information.
+          </p>
+        </section>
+
+        <section
+          id="pitfalls"
+          class="guide-section"
+          aria-labelledby="pitfalls-title"
+        >
+          <p class="eyebrow">04 / THREE PLACES I GOT STUCK</p>
+          <h2 id="pitfalls-title">Turn sticking points into useful checks.</h2>
+          <div class="pitfall">
+            <span class="pitfall-number">01</span>
+            <div>
+              <h3>Does inverse translation just change the sign?</h3>
+              <p>
+                The form
+                <span class="pt-symbol"
+                  >p<sub>C</sub> = R<sub>CW</sub>p<sub>W</sub> + t<sub
+                    >CW</sub
+                  ></span
+                >
+                is correct. Its terms need to be derived correctly. Working
+                backward from the original equation—<strong
+                  >subtract translation, then apply inverse rotation</strong
+                >—gives
+                <span class="pt-symbol"
+                  >t<sub>CW</sub> = −R<sub>WC</sub>ᵀt<sub>WC</sub></span
+                >.
+              </p>
+            </div>
+          </div>
+          <div class="pitfall">
+            <span class="pitfall-number">02</span>
+            <div>
+              <h3>The recovered point became (1, 4, 4)ᵀ.</h3>
+              <p>
+                Check the second component. The second row–column dot product in
+                <span class="pt-symbol">R<sub>CW</sub>p<sub>W</sub></span> is
+                <strong>−1 × 1 + 0 × 3 + 0 × 4 = −1</strong>. Adding the
+                translation’s +1 gives 0. Calculate each row instead of
+                retaining the original y-coordinate and using 3 + 1.
+              </p>
+            </div>
+          </div>
+          <div class="pitfall">
+            <span class="pitfall-number">03</span>
+            <div>
+              <h3>I dropped f<sub>x</sub> from the depth formula.</h3>
+              <p>
+                In
+                <span class="pt-symbol"
+                  >Z<sub>C</sub> = X<sub>C</sub>/(u − c<sub>x</sub>)</span
+                >, the numerator should be
+                <strong>f<sub>x</sub>X<sub>C</sub></strong
+                >. Writing the intermediate step
+                <span class="pt-symbol"
+                  >(u − c<sub>x</sub>)Z<sub>C</sub> = f<sub>x</sub>X<sub
+                    >C</sub
+                  ></span
+                >
+                helps keep every coefficient in the rearrangement.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="practice"
+          class="guide-section"
+          aria-labelledby="practice-title"
+        >
+          <p class="eyebrow">05 / YOUR 45-MINUTE PRACTICE</p>
+          <h2 id="practice-title">Hide the equations. Explain them again.</h2>
+          <p>
+            This is a <strong>self-study checklist for you, the reader</strong>.
+            Use pen and paper or a short program to work through the same
+            numbers. If you spend three minutes stuck on one question, record it
+            and move on.
+          </p>
+          <ol class="practice-steps">
+            <li>
+              <span class="time">0–5 min</span>
+              <div>
+                <strong>Write the frames and values.</strong>
+                <p>
+                  Note the C → W direction, column vectors, camera axes, and
+                  units. Copy p<sub>C</sub>, R<sub>WC</sub>, and t<sub>WC</sub>.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">5–15 min</span>
+              <div>
+                <strong>Transform into world coordinates.</strong>
+                <p>
+                  Calculate rotation and translation separately. Explain whether
+                  the point moved or its representation changed.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">15–25 min</span>
+              <div>
+                <strong>Recover the point with the inverse.</strong>
+                <p>
+                  Rearrange the original equation to derive R<sub>CW</sub> and
+                  t<sub>CW</sub>. Check that you recover p<sub>C</sub>. Explain
+                  in one sentence why negating the translation is insufficient.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">25–37 min</span>
+              <div>
+                <strong>Project two points into the image.</strong>
+                <p>
+                  Project (1, 0, 4)ᵀ and (2, 0, 8)ᵀ, and compare the results.
+                  Explain whether image coordinates alone determine depth.
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">37–45 min</span>
+              <div>
+                <strong
+                  >Explain it in two minutes; record what was difficult.</strong
+                >
+                <p>
+                  Hide the equations and explain “forward transform → inverse
+                  transform → projection.” Record up to three sticking points
+                  using the prompts below.
+                </p>
+              </div>
+            </li>
+          </ol>
+          <ul class="note-prompts">
+            <li>Where did you get stuck?</li>
+            <li>What was unclear?</li>
+            <li>How do you understand it now?</li>
+          </ul>
+          <p>
+            You do not need to fill all three slots. Beyond getting the numbers
+            right, the goal is to explain
+            <strong
+              >which frame each quantity belongs to and why the operations occur
+              in that order</strong
+            >.
+          </p>
+          <div class="note-closing">
+            <p>
+              Next, test the same idea of “working backward” with homogeneous
+              transformation matrices.
+            </p>
+            <a href="./index.html#E" class="experiment-link"
+              >Open Experiment E in Rotation Lab (JA) →</a
+            >
+          </div>
+        </section>
+      </article>
+    </main>
+    <footer>
+      <span>Rotation Lab — Learn by working it through.</span
+      ><a href="#conventions">Back to the frame definitions ↑</a>
+    </footer>
+    <script type="module" src="./src/point-transforms.ts"></script>
+  </body>
+</html>

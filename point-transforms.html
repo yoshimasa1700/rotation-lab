@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="1つの点をカメラ座標から世界座標へ、逆変換で元へ、そして画像のピクセルへ。数値例と45分の自習で、座標系・逆並進・投影を確かめる学習ノート。"
+    />
+    <title>点の座標変換・逆変換・カメラ投影 — Rotation Lab</title>
+    <link rel="stylesheet" href="./src/style.css" />
+    <link rel="stylesheet" href="./src/optimization.css" />
+    <link rel="stylesheet" href="./src/point-transforms.css" />
+    <link
+      rel="alternate"
+      hreflang="en"
+      href="https://yoshimasa1700.github.io/rotation-lab/point-transforms.en.html"
+    />
+  </head>
+  <body class="guide-page point-note">
+    <header class="masthead">
+      <a href="./index.html#E" class="brand" aria-label="Rotation Lab ホーム"
+        ><span class="brand-mark">↗</span> Rotation Lab<span class="edition"
+          >FIELD NOTES / 03</span
+        ></a
+      >
+      <nav class="note-header-links" aria-label="ページの切り替え">
+        <a href="./index.html#E" class="source-link">実験へ戻る ↗</a>
+        <a
+          href="./point-transforms.en.html"
+          rel="alternate"
+          hreflang="en"
+          lang="en"
+          class="source-link"
+          >English</a
+        >
+      </nav>
+    </header>
+    <main class="guide">
+      <header class="guide-hero">
+        <p class="eyebrow">READING NOTE 02 / POINTS &amp; PROJECTION</p>
+        <h1>点の座標変換から、<br /><em>カメラ投影まで。</em></h1>
+        <p class="guide-deck">1つの点を追うと、式の順番に意味が見える。</p>
+        <p>
+          カメラから見た座標を世界座標へ変え、逆変換で戻し、画像上の位置を求める。2026年10月30日の手計算で詰まった3か所を、途中式と一緒にまとめました。
+        </p>
+        <div class="guide-meta">
+          <time datetime="2026-10-30">2026.10.30</time
+          ><span>約8分で読む / 45分で自習</span
+          ><span>列ベクトル / 座標系の変換</span>
+        </div>
+        <div class="note-route" aria-label="学ぶ流れ">
+          <span>C → W：座標変換</span><span>W → C：逆変換</span
+          ><span>C → 画像：投影</span>
+        </div>
+      </header>
+      <nav class="guide-toc" aria-label="このページの目次">
+        <span class="eyebrow">CONTENTS</span
+        ><a href="#conventions">00 座標系と記号</a
+        ><a href="#forward">01 座標変換</a><a href="#inverse">02 逆変換</a
+        ><a href="#projection">03 カメラ投影</a
+        ><a href="#pitfalls">04 詰まった3か所</a
+        ><a href="#practice">05 45分で試す</a>
+      </nav>
+      <article class="guide-body">
+        <section
+          id="conventions"
+          class="guide-section"
+          aria-labelledby="conventions-title"
+        >
+          <p class="eyebrow">00 / BEFORE CALCULATING</p>
+          <h2 id="conventions-title">点は同じ。表す座標系が変わる。</h2>
+          <p>
+            このページの座標変換では、<strong>空間内の点を動かさず、同じ点を別の座標系で表します。</strong>座標軸を固定して点自体を回す「能動回転」とは、何を変えているかが異なります。同じ形の式でも、添字と座標系を先に確認します。
+          </p>
+          <dl class="pt-definitions">
+            <dt>W / C</dt>
+            <dd>
+              Wは世界座標系、Cはカメラ座標系。カメラの軸は<strong>xが右、yが下、zが前</strong>の右手系です。
+            </dd>
+            <dt>
+              <span class="pt-symbol">p<sub>W</sub> / p<sub>C</sub></span>
+            </dt>
+            <dd>
+              同じ点の世界座標 /
+              カメラ座標。すべて<strong>列ベクトル</strong>で扱い、(1, 0,
+              4)ᵀのようにも書きます。
+            </dd>
+            <dt>
+              <span class="pt-symbol">R<sub>WC</sub></span>
+            </dt>
+            <dd>Cで表したベクトルをWでの表現へ変える回転行列。</dd>
+            <dt>
+              <span class="pt-symbol">t<sub>WC</sub></span>
+            </dt>
+            <dd>
+              <strong>カメラ原点を世界座標で表した位置</strong
+              >。点の座標と並進の単位はmです。
+            </dd>
+          </dl>
+          <p>
+            添字は「出力の座標系、入力の座標系」の順です。同次変換行列の表記では
+            <span class="pt-symbol">T<sub>WC</sub> = T<sub>W←C</sub></span
+            >、つまり <code>T_W_from_C</code> を意味します。
+          </p>
+          <div class="pt-given" aria-label="今回使う値">
+            <div class="pt-equation">
+              <span>p<sub>C</sub> =</span
+              ><span class="pt-matrix" aria-label="列ベクトル 1, 0, 4"
+                ><span>1</span><span>0</span><span>4</span></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span>R<sub>WC</sub> =</span
+              ><span
+                class="pt-matrix"
+                style="--columns: 3"
+                aria-label="行列、第1行 0, −1, 0、第2行 1, 0, 0、第3行 0, 0, 1"
+                ><span>0</span><span>−1</span><span>0</span><span>1</span
+                ><span>0</span><span>0</span><span>0</span><span>0</span
+                ><span>1</span></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span>t<sub>WC</sub> =</span
+              ><span class="pt-matrix" aria-label="列ベクトル 1, 2, 0"
+                ><span>1</span><span>2</span><span>0</span></span
+              >
+            </div>
+          </div>
+          <p class="guide-caption">
+            世界の軸方向はこの変換で定まります。世界のy軸が鉛直上向き、という追加の規約は置いていません。
+          </p>
+        </section>
+
+        <section
+          id="forward"
+          class="guide-section"
+          aria-labelledby="forward-title"
+        >
+          <p class="eyebrow">01 / CAMERA → WORLD</p>
+          <h2 id="forward-title">向きをそろえて、原点の位置を足す。</h2>
+          <div class="pt-equation pt-result">
+            <span
+              >p<sub>W</sub> = R<sub>WC</sub> p<sub>C</sub> + t<sub
+                >WC</sub
+              ></span
+            >
+          </div>
+          <p>
+            <span class="pt-symbol">R<sub>WC</sub> p<sub>C</sub></span>
+            は、カメラ原点から点へ向かうベクトルを、世界の軸で表したものです。その後にカメラ原点の世界座標
+            <span class="pt-symbol">t<sub>WC</sub></span>
+            を足すと、世界原点から見た点の位置になります。
+          </p>
+          <div class="pt-working">
+            <p>① 回転行列を掛ける。各成分は「行と列」の内積です。</p>
+            <div class="pt-equation">
+              <span>R<sub>WC</sub> p<sub>C</sub> =</span
+              ><span class="pt-matrix" aria-label="各行の計算"
+                ><span>0·1 − 1·0 + 0·4</span><span>1·1 + 0·0 + 0·4</span
+                ><span>0·1 + 0·0 + 1·4</span></span
+              ><span class="pt-term"
+                >=
+                <span class="pt-matrix" aria-label="列ベクトル 0, 1, 4"
+                  ><span>0</span><span>1</span><span>4</span></span
+                ></span
+              >
+            </div>
+            <p>② 原点の位置を足す。</p>
+            <div class="pt-equation">
+              <span>p<sub>W</sub> =</span
+              ><span class="pt-matrix"
+                ><span>0</span><span>1</span><span>4</span></span
+              ><span class="pt-term"
+                >+
+                <span class="pt-matrix"
+                  ><span>1</span><span>2</span><span>0</span></span
+                ></span
+              ><span class="pt-term"
+                >=
+                <span class="pt-matrix" aria-label="列ベクトル 1, 3, 4"
+                  ><span>1</span><span>3</span><span>4</span></span
+                ></span
+              >
+            </div>
+          </div>
+          <p>
+            <strong>点自体は同じ場所にあります。</strong>カメラ座標では (1, 0,
+            4)ᵀ、世界座標では (1, 3, 4)ᵀと表されています。
+          </p>
+        </section>
+
+        <section
+          id="inverse"
+          class="guide-section"
+          aria-labelledby="inverse-title"
+        >
+          <p class="eyebrow">02 / WORLD → CAMERA</p>
+          <h2 id="inverse-title">先に並進を引き、次に逆回転。</h2>
+          <p>
+            元の式から
+            <span class="pt-symbol">p<sub>C</sub></span>
+            を取り出します。回転行列では、逆行列は転置
+            <span class="pt-symbol">R⁻¹ = Rᵀ</span> です。
+          </p>
+          <div class="pt-working">
+            <div class="pt-equation">
+              <span
+                >p<sub>W</sub> − t<sub>WC</sub> = R<sub>WC</sub> p<sub
+                  >C</sub
+                ></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span
+                >p<sub>C</sub> = R<sub>WC</sub>ᵀ (p<sub>W</sub> −
+                t<sub>WC</sub>)</span
+              >
+            </div>
+            <div class="pt-equation">
+              <span
+                >= R<sub>WC</sub>ᵀ p<sub>W</sub> − R<sub>WC</sub>ᵀ t<sub
+                  >WC</sub
+                ></span
+              >
+            </div>
+          </div>
+          <p>
+            <span class="pt-symbol"
+              >p<sub>C</sub> = R<sub>CW</sub> p<sub>W</sub> + t<sub
+                >CW</sub
+              ></span
+            >
+            という形で書くなら、次の2つをセットで求めます。
+          </p>
+          <div class="pt-equation pt-result">
+            <span>R<sub>CW</sub> = R<sub>WC</sub>ᵀ</span
+            ><span>t<sub>CW</sub> = −R<sub>CW</sub> t<sub>WC</sub></span>
+          </div>
+          <p>
+            <strong>逆変換の並進は、符号を変えるだけではありません。</strong
+            ><span class="pt-symbol">t<sub>CW</sub></span>
+            は「世界原点をカメラ座標で表した位置」です。<span class="pt-symbol"
+              >t<sub>WC</sub></span
+            >
+            とは表現する座標系が違うため、逆回転も必要になります。
+          </p>
+          <div class="pt-given">
+            <div class="pt-equation">
+              <span>R<sub>CW</sub> =</span
+              ><span
+                class="pt-matrix"
+                style="--columns: 3"
+                aria-label="行列、第1行 0, 1, 0、第2行 −1, 0, 0、第3行 0, 0, 1"
+                ><span>0</span><span>1</span><span>0</span><span>−1</span
+                ><span>0</span><span>0</span><span>0</span><span>0</span
+                ><span>1</span></span
+              >
+            </div>
+            <div class="pt-equation">
+              <span>t<sub>CW</sub> = −</span
+              ><span class="pt-matrix"
+                ><span>2</span><span>−1</span><span>0</span></span
+              ><span class="pt-term"
+                >=
+                <span class="pt-matrix"
+                  ><span>−2</span><span>1</span><span>0</span></span
+                ></span
+              >
+            </div>
+          </div>
+          <p>
+            まず
+            <span class="pt-symbol">R<sub>CW</sub> p<sub>W</sub></span>
+            だけを計算します。第2成分は
+            <strong>−1 × 1 + 0 × 3 + 0 × 4 = −1</strong
+            >。回転前のy成分「3」をそのまま使わないようにします。
+          </p>
+          <div class="pt-equation">
+            <span>p<sub>C</sub> =</span
+            ><span class="pt-matrix"
+              ><span>3</span><span>−1</span><span>4</span></span
+            ><span class="pt-term"
+              >+
+              <span class="pt-matrix"
+                ><span>−2</span><span>1</span><span>0</span></span
+              ></span
+            ><span class="pt-term"
+              >=
+              <span class="pt-matrix" aria-label="列ベクトル 1, 0, 4"
+                ><span>1</span><span>0</span><span>4</span></span
+              ></span
+            >
+          </div>
+          <p>
+            最初の点に戻りました。もう一つの確認方法は、先に
+            <span class="pt-symbol"
+              >p<sub>W</sub> − t<sub>WC</sub> = (0, 1, 4)ᵀ</span
+            >
+            を計算してから逆回転することです。
+          </p>
+          <a href="./index.html#E" class="experiment-link"
+            >実験Eで同次変換と逆変換を動かす →</a
+          >
+        </section>
+
+        <section
+          id="projection"
+          class="guide-section"
+          aria-labelledby="projection-title"
+        >
+          <p class="eyebrow">03 / CAMERA → IMAGE</p>
+          <h2 id="projection-title">位置の比を、画像のピクセルへ。</h2>
+          <p>
+            レンズの歪みを無視したピンホールカメラを考えます。投影に使うのは<strong
+              >カメラ座標</strong
+            >
+            <span class="pt-symbol"
+              >p<sub>C</sub> = (X<sub>C</sub>, Y<sub>C</sub>,
+              Z<sub>C</sub>)ᵀ</span
+            >
+            です。世界座標の点は、まずカメラ座標へ変換します。
+          </p>
+          <p>
+            画像のuは右、vは下に増加します。焦点距離は
+            <span class="pt-symbol">f<sub>x</sub> = f<sub>y</sub> = 400</span
+            >、主点は
+            <span class="pt-symbol"
+              >(c<sub>x</sub>, c<sub>y</sub>) = (320, 240)</span
+            >。これらと画像座標の単位はピクセルです。
+          </p>
+          <div class="pt-equation pt-result">
+            <span class="pt-term"
+              ><span>u = f<sub>x</sub></span>
+              <span class="pt-fraction"
+                ><span>X<sub>C</sub></span
+                ><span>Z<sub>C</sub></span></span
+              >
+              <span>+ c<sub>x</sub></span></span
+            ><span class="pt-term"
+              ><span>v = f<sub>y</sub></span>
+              <span class="pt-fraction"
+                ><span>Y<sub>C</sub></span
+                ><span>Z<sub>C</sub></span></span
+              >
+              <span>+ c<sub>y</sub></span></span
+            >
+          </div>
+          <p>
+            <span class="pt-symbol">Z<sub>C</sub></span>
+            は<strong>光軸方向の深さ</strong>です。カメラから点までのユークリッド距離
+            <span class="pt-symbol"
+              >√(X<sub>C</sub>² + Y<sub>C</sub>² + Z<sub>C</sub>²)</span
+            >
+            とは異なります。ここではカメラ前方の
+            <span class="pt-symbol">Z<sub>C</sub> &gt; 0</span>
+            を扱います。ゼロなら式は未定義、負なら点はカメラの後ろです。
+          </p>
+          <div class="pt-working">
+            <p>点 (1, 0, 4)ᵀ の投影：</p>
+            <div class="pt-equation">
+              <span>u = 400 × 1/4 + 320 = 420</span
+              ><span>v = 400 × 0/4 + 240 = 240</span>
+            </div>
+            <p>点を2倍した (2, 0, 8)ᵀ の投影：</p>
+            <div class="pt-equation">
+              <span>u = 400 × 2/8 + 320 = 420</span
+              ><span>v = 400 × 0/8 + 240 = 240</span>
+            </div>
+          </div>
+          <p>
+            <strong
+              >両方とも (u, v) = (420,
+              240)。画像上の位置は変わりません。</strong
+            >1/4 =
+            2/8なので、カメラから同じ方向にある点は、深さが異なっても同じ位置に投影されます。
+          </p>
+          <aside class="ray-experiment" aria-labelledby="ray-title">
+            <p class="eyebrow">TRY / SAME RAY, SAME PIXEL</p>
+            <h3 id="ray-title">点を光線上で動かしてみる。</h3>
+            <p>
+              カメラの姿勢は固定し、点を
+              <span class="pt-symbol">p<sub>C</sub> = λ(1, 0, 4)ᵀ</span>
+              に変えます。λを変える操作では、空間内の点自体が移動します。
+            </p>
+            <figure class="ray-figure">
+              <svg
+                viewBox="0 0 640 280"
+                role="img"
+                aria-labelledby="ray-svg-title ray-svg-desc"
+              >
+                <title id="ray-svg-title">同じ光線上の点とカメラ原点</title>
+                <desc id="ray-svg-desc">
+                  Yが0の断面。Zを横、Xを縦に描く。点(1,0,4)と点(2,0,8)はカメラ原点から伸びる同じ直線上にあり、画像座標はどちらも(420,240)となる。
+                </desc>
+                <path
+                  d="M60 38V220H605"
+                  fill="none"
+                  stroke="#7d8b7d"
+                  stroke-width="2"
+                />
+                <path
+                  d="M54 47L60 36L66 47M596 214L607 220L596 226"
+                  fill="none"
+                  stroke="#7d8b7d"
+                  stroke-width="2"
+                />
+                <path
+                  d="M60 220L590 87.5"
+                  fill="none"
+                  stroke="#397f57"
+                  stroke-width="3"
+                />
+                <path
+                  d="M228 178V220M396 136V220"
+                  fill="none"
+                  stroke="#7d8b7d"
+                  stroke-width="1.5"
+                  stroke-dasharray="5 5"
+                />
+                <g
+                  fill="currentColor"
+                  font-size="24"
+                  font-family="Georgia, serif"
+                >
+                  <text x="12" y="40">
+                    X
+                    <tspan baseline-shift="sub" font-size="16">C</tspan>
+                  </text>
+                  <text x="595" y="254">
+                    Z
+                    <tspan baseline-shift="sub" font-size="16">C</tspan>
+                  </text>
+                  <text x="28" y="250">C</text>
+                  <text x="217" y="250">4</text>
+                  <text x="385" y="250">8</text>
+                  <text x="210" y="209">p</text>
+                  <text x="376" y="169">2p</text>
+                </g>
+                <circle cx="60" cy="220" r="5" fill="#283b36" />
+                <circle
+                  cx="228"
+                  cy="178"
+                  r="6"
+                  fill="#f6f4ec"
+                  stroke="#397f57"
+                  stroke-width="2"
+                />
+                <circle
+                  cx="396"
+                  cy="136"
+                  r="6"
+                  fill="#f6f4ec"
+                  stroke="#397f57"
+                  stroke-width="2"
+                />
+                <circle id="ray-point" cx="228" cy="178" r="8" fill="#a5452e" />
+                <text
+                  id="ray-point-label"
+                  x="238"
+                  y="166"
+                  fill="#a5452e"
+                  font-size="24"
+                  font-family="Georgia, serif"
+                >
+                  λ=1
+                </text>
+              </svg>
+              <figcaption>
+                Y<sub>C</sub> =
+                0でのXZ断面の模式図で、カメラ画像そのものではありません。図ではZを右、Xを上に描いています。pと2pは同じ光線上にあり、どちらも画像の
+                (420, 240) へ投影されます。
+              </figcaption>
+            </figure>
+            <fieldset id="ray-controls" hidden>
+              <legend>点の位置を変える</legend>
+              <label class="ray-slider-label" for="ray-scale"
+                ><span>倍率 λ（0.5〜3）</span
+                ><span
+                  >λ = <output id="scale-value" for="ray-scale">1</output></span
+                ></label
+              >
+              <input
+                id="ray-scale"
+                type="range"
+                min="0.5"
+                max="3"
+                step="0.25"
+                value="1"
+              />
+              <div class="ray-buttons">
+                <button id="ray-double" type="button">2倍にする（λ=2）</button
+                ><button id="ray-reset" type="button">元に戻す</button>
+              </div>
+            </fieldset>
+            <dl class="ray-values" aria-live="polite" aria-atomic="true">
+              <div>
+                <dt>カメラ座標 p<sub>C</sub> / m</dt>
+                <dd><output id="camera-point">(1, 0, 4)</output></dd>
+              </div>
+              <div>
+                <dt>世界座標 p<sub>W</sub> / m</dt>
+                <dd><output id="world-point">(1, 3, 4)</output></dd>
+              </div>
+              <div>
+                <dt>逆変換で戻した p<sub>C</sub> / m</dt>
+                <dd><output id="recovered-point">(1, 0, 4)</output></dd>
+              </div>
+              <div class="pixel-output">
+                <dt>画像座標 (u, v) / px</dt>
+                <dd><output id="pixel-point">(420, 240)</output></dd>
+              </div>
+            </dl>
+            <noscript
+              ><p class="guide-caption">
+                操作にはJavaScriptが必要です。初期値と、p・2pの2点比較はこのページの本文で読めます。
+              </p></noscript
+            >
+          </aside>
+          <h3>画像座標だけで、奥行きは決まる？</h3>
+          <p>
+            <strong>この1枚の画像座標だけでは、一意に決まりません。</strong
+            >カメラの内部パラメータが既知でも、分かるのは
+            <span class="pt-symbol">X<sub>C</sub>/Z<sub>C</sub></span> と
+            <span class="pt-symbol">Y<sub>C</sub>/Z<sub>C</sub></span>
+            という比です。正のλで点の全成分を同じ倍率にすると、比は変わりません。
+          </p>
+          <div class="pt-equation">
+            <span class="pt-term"
+              ><span>u − c<sub>x</sub> = f<sub>x</sub></span>
+              <span class="pt-fraction"
+                ><span>X<sub>C</sub></span
+                ><span>Z<sub>C</sub></span></span
+              ></span
+            ><span class="pt-term"
+              ><span>⇒ Z<sub>C</sub> =</span>
+              <span class="pt-fraction"
+                ><span>f<sub>x</sub> X<sub>C</sub></span
+                ><span>u − c<sub>x</sub></span></span
+              ></span
+            >
+          </div>
+          <p>
+            この変形で深さを求められるのは、<strong
+              >X<sub>C</sub>が別の情報から既知で、u ≠
+              c<sub>x</sub>のとき</strong
+            >です。画像座標だけではX<sub>C</sub>も未知なので、式を変形しても深さの情報は増えません。
+          </p>
+        </section>
+
+        <section
+          id="pitfalls"
+          class="guide-section"
+          aria-labelledby="pitfalls-title"
+        >
+          <p class="eyebrow">04 / THREE PLACES I GOT STUCK</p>
+          <h2 id="pitfalls-title">詰まったところを、次の確認に変える。</h2>
+          <div class="pitfall">
+            <span class="pitfall-number">01</span>
+            <div>
+              <h3>逆並進は、符号を変えるだけ？</h3>
+              <p>
+                逆変換の式
+                <span class="pt-symbol"
+                  >p<sub>C</sub> = R<sub>CW</sub>p<sub>W</sub> + t<sub
+                    >CW</sub
+                  ></span
+                >
+                は正しい。求め直すべきなのは、その中身です。<strong>先に並進を引いて、次に逆回転</strong>と元の式からたどれば、<span
+                  class="pt-symbol"
+                  >t<sub>CW</sub> = −R<sub>WC</sub>ᵀt<sub>WC</sub></span
+                >
+                と分かります。
+              </p>
+            </div>
+          </div>
+          <div class="pitfall">
+            <span class="pitfall-number">02</span>
+            <div>
+              <h3>戻した点が (1, 4, 4)ᵀになった。</h3>
+              <p>
+                第2成分を見直します。<span class="pt-symbol"
+                  >R<sub>CW</sub>p<sub>W</sub></span
+                >
+                の第2成分は、行と列の内積で
+                <strong>−1 × 1 + 0 × 3 + 0 × 4 = −1</strong>。そこに並進の +1
+                を足すので0です。回転前のy成分を残して 3 + 1
+                としないよう、行ごとに計算します。
+              </p>
+            </div>
+          </div>
+          <div class="pitfall">
+            <span class="pitfall-number">03</span>
+            <div>
+              <h3>深さの式からf<sub>x</sub>が抜けた。</h3>
+              <p>
+                <span class="pt-symbol"
+                  >Z<sub>C</sub> = X<sub>C</sub>/(u − c<sub>x</sub>)</span
+                >
+                ではなく、分子は
+                <strong>f<sub>x</sub>X<sub>C</sub></strong> です。<span
+                  class="pt-symbol"
+                  >(u − c<sub>x</sub>)Z<sub>C</sub> = f<sub>x</sub>X<sub
+                    >C</sub
+                  ></span
+                >
+                を一度書くと、係数を落とさず変形できます。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="practice"
+          class="guide-section"
+          aria-labelledby="practice-title"
+        >
+          <p class="eyebrow">05 / YOUR 45-MINUTE PRACTICE</p>
+          <h2 id="practice-title">式を隠して、もう一度説明する。</h2>
+          <p>
+            ここからは<strong>読者自身の自習用チェックリスト</strong>です。紙とペンか短いコードを使い、同じ数値を計算してください。同じ疑問で3分止まったら記録して先へ進みます。
+          </p>
+          <ol class="practice-steps">
+            <li>
+              <span class="time">0〜5分</span>
+              <div>
+                <strong>座標系と値を書く。</strong>
+                <p>
+                  C →
+                  Wの矢印、列ベクトル、カメラの軸、単位を明記。p<sub>C</sub>、R<sub>WC</sub>、t<sub>WC</sub>を書き写します。
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">5〜15分</span>
+              <div>
+                <strong>世界座標へ変換する。</strong>
+                <p>
+                  回転と並進を別々に計算。「点が動いたのか、表し方が変わったのか」を説明します。
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">15〜25分</span>
+              <div>
+                <strong>逆変換で戻す。</strong>
+                <p>
+                  元の式を変形し、R<sub>CW</sub>とt<sub>CW</sub>を導きます。p<sub>C</sub>へ戻ることを確認し、並進の符号変更だけでは足りない理由を1文にします。
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">25〜37分</span>
+              <div>
+                <strong>2点を画像へ投影する。</strong>
+                <p>
+                  (1, 0, 4)ᵀと(2, 0,
+                  8)ᵀを投影し、結果を比較。「画像座標だけで深さが決まるか」に理由を添えて答えます。
+                </p>
+              </div>
+            </li>
+            <li>
+              <span class="time">37〜45分</span>
+              <div>
+                <strong>2分で説明し、詰まりを残す。</strong>
+                <p>
+                  式を隠して「座標変換 → 逆変換 →
+                  投影」を説明。詰まった箇所を最大3つ、次の形式で記録します。
+                </p>
+              </div>
+            </li>
+          </ol>
+          <ul class="note-prompts">
+            <li>どこで止まったか。</li>
+            <li>何が分からなかったか。</li>
+            <li>今はどう理解しているか。</li>
+          </ul>
+          <p>
+            3つ埋める必要はありません。数値が合うことに加え、<strong>どの座標系で表した量を、どの順番で計算したか</strong>を説明できれば、この練習の到達点です。
+          </p>
+          <div class="note-closing">
+            <p>次は、同じ「逆にたどる」考え方を同次変換行列で確かめます。</p>
+            <a href="./index.html#E" class="experiment-link"
+              >Rotation Labの実験Eへ →</a
+            >
+          </div>
+        </section>
+      </article>
+    </main>
+    <footer>
+      <span>Rotation Lab — 学びを、手で確かめる。</span
+      ><a href="#conventions">座標系の定義に戻る ↑</a>
+    </footer>
+    <script type="module" src="./src/point-transforms.ts"></script>
+  </body>
+</html>

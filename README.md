@@ -2,7 +2,7 @@
 
 Euler角・単位Quaternion・SO(3)・SE(3)の関係を、5つの3D実験で触って理解する学習用デモです。日本語の説明、数値、対応コードをひとつの流れで読めます。
 
-[デモを開く](https://yoshimasa1700.github.io/rotation-lab/) · [最適化の解説](https://yoshimasa1700.github.io/rotation-lab/optimization.html) · [English](README.en.md) · [数学の規約](docs/conventions.md) · [検証ノート](docs/math-notes.md)
+[デモを開く](https://yoshimasa1700.github.io/rotation-lab/) · [最適化の解説](https://yoshimasa1700.github.io/rotation-lab/optimization.html) · [座標変換とカメラ投影](https://yoshimasa1700.github.io/rotation-lab/point-transforms.html) · [English](README.en.md) · [数学の規約](docs/conventions.md) · [検証ノート](docs/math-notes.md)
 
 [![Test, build and deploy](https://github.com/yoshimasa1700/rotation-lab/actions/workflows/pages.yml/badge.svg)](https://github.com/yoshimasa1700/rotation-lab/actions/workflows/pages.yml)
 
@@ -33,6 +33,12 @@ Euler角・単位Quaternion・SO(3)・SE(3)の関係を、5つの3D実験で触�
 
 [なぜ最適化にSO(3)・SE(3)？](https://yoshimasa1700.github.io/rotation-lab/optimization.html)では、30°回転の数値例、Lie代数の3・6成分による局所更新、Quaternionとの併用、Euler角の特異点、手法の限界を説明しています。実験A・B・Eと相互に移動でき、JavaScriptなしでも読めます。
 
+## 点の座標変換とカメラ投影
+
+[日本語](https://yoshimasa1700.github.io/rotation-lab/point-transforms.html) / [English](https://yoshimasa1700.github.io/rotation-lab/point-transforms.en.html)
+
+2026年10月30日の学習を、同じ点のカメラ座標・世界座標、逆変換 `−Rᵀt`、行ごとの行列積、ピンホール投影の順に整理しました。今回の数値例と3つのつまずき、45分の復習手順を収録しています。光線上で点を動かすと、深さが違っても画像座標が変わらないことを確認できます。本文は日英ともJavaScriptなしで読めます。
+
 ## 起動・検証
 
 Node.js **24 LTS**を推奨（最低22.12）。依存バージョンは`package-lock.json`で固定しています。
@@ -47,11 +53,11 @@ npm run dev
 表示されたローカルURLを開きます。
 
 ```sh
-npm test          # 数学・Three.js境界の22テスト
+npm test          # 数学・カメラ投影・Three.js境界のテスト
 npm run build     # TypeScript型検査＋本番ビルド
 npm run preview   # ビルドした静的サイトを確認
 npx playwright install chromium # 初回のみ
-npm run test:e2e  # 本番ビルド＋11件のブラウザテスト
+npm run test:e2e  # 本番ビルド＋ブラウザテスト
 ```
 
 ## 設計
@@ -72,7 +78,7 @@ e2e/                     入力・フォーカス・補間・狭い画面の操�
 
 ## 公開
 
-GitHub ActionsはPRで数学テスト・型検査・ビルド・Chromiumによる11件のブラウザテストを実行し、`main`へのpush後にGitHub Pagesへ配信します。別のリポジトリで使う場合はSettings → Pages → Sourceを**GitHub Actions**に設定してください。Viteの`base: './'`により、リポジトリ配下URLでもアセットを解決できます。
+GitHub ActionsはPRで数学テスト・型検査・ビルド・Chromiumによるブラウザテストを実行し、`main`へのpush後にGitHub Pagesへ配信します。別のリポジトリで使う場合はSettings → Pages → Sourceを**GitHub Actions**に設定してください。Viteの`base: './'`により、リポジトリ配下URLでもアセットを解決できます。
 
 [実装計画（開始時の記録）](docs/project-plan.md)と[設計の振り返り](docs/retrospective.md)も公開しています。現在の仕様はREADME・規約・コード・テストを参照してください。
 
